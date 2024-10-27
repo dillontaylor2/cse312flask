@@ -1,3 +1,5 @@
+flask
 pymongo
 bcrypt
-flask
+requests
+jinja2
