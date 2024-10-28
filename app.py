@@ -37,7 +37,7 @@ def serve_first():
         else:
             matches = user_data.find({"cheese":user["cheese"]})
             second_matches = user_data.find({})
-            response = make_response(render_template("index.html"), dates=matches)
+            response = make_response(render_template("index.html", dates=matches, user=user["username"]))
             response.headers["Content-Type"] = "text/html"
             return response
             
@@ -96,10 +96,10 @@ def login_user():
         fin_pass = password + salt
         fin_pass = hashlib.sha256(fin_pass.encode()).hexdigest()
         if found_user["password"] == fin_pass:
-            auth_t = uuid.uuid4()
+            auth_t = str(uuid.uuid4())
             hashed_auth_t = hashlib.sha256(auth_t.encode()).hexdigest()
             user_data.update_one({"username": username},{"$set" : {"authtoken": hashed_auth_t}})
-            response = make_response(redirect("/"),user = username)
+            response = make_response(redirect("/"))
             response.set_cookie("authtoken", auth_t, httponly = True, max_age=3600)
             return response
         else:

@@ -12,6 +12,7 @@
         <a class="active" href="">Home</a>
         <a href="login">Log In</a>
         <a href="register">Sign Up</a>
+        {{ user }}
     </div>
     <div class="mainHello">
         <h1>Welcome to Fromage</h1>
@@ -20,7 +21,15 @@
     </div>
     <div class="Profiles">
         <h1>🧀 Profiles For You 🧀</h1>
-        {{ dates }}
+        {% for person in dates %}
+        <div class="profileContainer">
+            <div class="box">
+                <h2>{{ person["username"] }}</h2>
+                <p>Age: {{ person["age"] }}</p>
+                <p>{{ person["catchphrase"] }}</p>
+                <button ><label>Like</label><br>
+            </div>
+        {% endfor %}
     </div>
 </body>
 </html>
