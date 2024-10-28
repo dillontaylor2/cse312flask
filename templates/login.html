@@ -10,6 +10,9 @@
     <div class="container">
       <div class="center">
           <h1>Login</h1>
+          {% if username_not_exist %}
+          The credenatials are wrong
+          {% endif %}
           <form action="/loginAccount" method="POST">
               <div class="txt_field">
                   <input type="text" name="username" required>

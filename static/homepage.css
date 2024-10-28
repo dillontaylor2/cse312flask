@@ -2,7 +2,7 @@ body{
     background-color: white;
     font-family: "Comic Sans MS";
     font-size: 14px;
-    overflow: hidden;
+    overflow: scroll;
     margin: 0;
     padding: 0;
 }
@@ -39,16 +39,17 @@ body{
 .Profiles{
     padding-top: 16px;
     padding-left: 16px;
+    overflow-y: scroll;
+    white-space: nowrap;
 }
 
 .profileContainer{
-    display: grid;
     gap: 10px;
     grid-template-columns: repeat(6, 1fr);
     padding-left: 16px;
     height: 300px;
     width: 100%;
-    overflow-y: auto;
+    overflow-y: scroll;
 }
 
 .box{
@@ -57,6 +58,7 @@ body{
     padding: 16px;
     text-align: center;
     border-radius: 10px;
+    overflow-y: scroll;
 }
 
 .message{

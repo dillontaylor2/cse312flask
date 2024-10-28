@@ -51,8 +51,8 @@ def recommendation_gen_algo(cheese_list):
 
 @app.after_request
 def add_nosniff(response):
-    if "X-Content-Type-Options" in response.headers:
-        response.headers["X-Content-Type-Options"] = "nosniff"
+    # if "X-Content-Type-Options" in response.headers:
+    response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
 @app.route("/")
@@ -89,6 +89,16 @@ def serve_login():
     response.headers["Content-Type"] = "text/html"
     return response
 
+@app.route("/logout")
+def logout():
+    authtoken = request.cookies.get("authtoken")
+    user = check_user(authtoken)
+    if user != "None":
+        user_data.update_one({"username": user["username"]},{"$set" : {"authtoken": ""}})
+    response = make_response(redirect("/"))
+    response.set_cookie("authtoken", authtoken, httponly = True, max_age=-3600)
+    return response
+
 @app.route("/createAccount",methods=["POST"])
 def create_user():
     username = request.form.get("username")
@@ -102,18 +112,18 @@ def create_user():
     salt = "4!INkfr@fx#d"
     found_user = user_data.find_one({"username": username})
     if username == "None":
-        response = make_response(render_template("register.html"),username_exists = True)
+        response = make_response(render_template("register.html",username_exists = True))
         return response
     if found_user is None:
         if password == confirmed_password:
             cheese = []
-            if moz is "yes":
+            if moz == "yes":
                 cheese.append("Mozeralla")
                 moz_data.insert_one({"username":username,"age":age,"catchphrase":catch_p})
-            if ched is "yes":
+            if ched == "yes":
                 cheese.append("Cheddar")
                 ched_data.insert_one({"username":username,"age":age,"catchphrase":catch_p})
-            if brie is "yes":
+            if brie == "yes":
                 cheese.append("Brie")
                 brie_data.insert_one({"username":username,"age":age,"catchphrase":catch_p})
             fin_pass = password + salt
@@ -126,7 +136,7 @@ def create_user():
             response = make_response(render_template("register.html",password_mismatch = True))
             return response
     else:
-        response = make_response(render_template("register.html"),username_exists = True)
+        response = make_response(render_template("register.html",username_exists = True))
         return response
 
 @app.route("/loginAccount",methods=["POST"])
@@ -136,7 +146,7 @@ def login_user():
     salt = "4!INkfr@fx#d"
     found_user = user_data.find_one({"username": username})
     if found_user is None:
-        response = make_response(render_template("login.html"), username_not_exist = True)
+        response = make_response(render_template("login.html", username_not_exist = True))
         return response
     else:
         fin_pass = password + salt
@@ -149,7 +159,7 @@ def login_user():
             response.set_cookie("authtoken", auth_t, httponly = True, max_age=3600)
             return response
         else:
-            response = make_response(render_template("login.html"),wrong_password = True)
+            response = make_response(render_template("login.html",username_not_exist = True))
             return response
 
 @app.route("/static/indexstyle.css")
@@ -196,7 +206,8 @@ def add_user_to_like():
         found_user2 = user_data.find_one({"username":user2})
         liked_user2 = found_user2["liked_user"]
         if user1 in liked_user2:
-            response = make_response(redirect(url_for("/",user2=user2,dates=matches,user=user1)))
+            response = make_response(render_template("index.html",user2=user2,dates=matches,user=user1))
+            return response
         return redirect("/",code=302)
 
 if __name__ == "__main__":

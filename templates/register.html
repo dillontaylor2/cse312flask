@@ -10,6 +10,12 @@
     <div class="container">
       <div class="center">
           <h1>Sign Up</h1>
+          {% if username_exists %}
+          Username already Exists
+          {% endif %}
+          {% if password_mismatch %}
+          Passwords dont match
+          {% endif %}
           <form action="/createAccount" method="POST">
               <div class="txt_field">
                   <input type="text" name="username" required>
