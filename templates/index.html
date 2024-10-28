@@ -12,13 +12,19 @@
         <a class="active" href="">Home</a>
         <a href="login">Log In</a>
         <a href="register">Sign Up</a>
-        {{ user }}
+        {% if user != "None" %}
+            {{ user }}
+        {% endif %}
+        
     </div>
     <div class="mainHello">
         <h1>Welcome to Fromage</h1>
         <image id="logo" class="logo" src="../static/logo.png" width="100" height="100"></image>
         <button onclick="rotate()">Click to Flip!</button>
     </div>
+    {% if user2 %}
+        <h1>YOU HAVE A MATCH WITH {{ user2 }}</h1>
+    {% endif %}
     <div class="Profiles">
         <h1>🧀 Profiles For You 🧀</h1>
         {% for person in dates %}
@@ -27,8 +33,10 @@
                 <h2>{{ person["username"] }}</h2>
                 <p>Age: {{ person["age"] }}</p>
                 <p>{{ person["catchphrase"] }}</p>
-                <button ><label>Like</label><br>
+                <button user_that_likes = "{{ user }}" user_that_got_liked = "{{ person['username'] }}" onclick="like_user(user_that_likes,user_that_got_liked)" id="toggle_like"><label>Like</label><br>
             </div>
+        </div>
+        <br>
         {% endfor %}
     </div>
 </body>

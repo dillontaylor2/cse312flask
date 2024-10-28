@@ -70,3 +70,8 @@ body{
     width: 200px;
     height: 200px;
 }
+
+#toggle_like.active {
+    background-color: red;
+    color: white;
+  }
