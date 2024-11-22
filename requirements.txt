@@ -1,5 +1,8 @@
-flask
-pymongo
+flask~=3.0.3
+pymongo~=4.10.1
 bcrypt
 requests
 jinja2
+Werkzeug
+pillow~=10.4.0
+Flask-Cors~=5.0.0

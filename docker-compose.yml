@@ -6,5 +6,8 @@ services:
       - '27017:27017'
   app:
     build: .
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DOCKER_DB=true # Add line here
     ports:
       - '8080:8080'

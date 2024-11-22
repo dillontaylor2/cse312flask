@@ -1,17 +1,44 @@
+from PIL import Image, ImageOps
 from flask import Flask, render_template, send_from_directory, redirect, request, make_response, url_for
 from pymongo import MongoClient
 import hashlib
 import os
 import uuid
 
-app = Flask(__name__, template_folder="templates")
 
-MC = MongoClient("mongo")
+from werkzeug.utils import secure_filename
+from flask_cors import CORS
+app = Flask(__name__, template_folder="templates")
+#CORS(app)
+UPLOAD_FOLDER = 'images'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+docker_db = os.environ.get('DOCKER_DB', "false")
+
+if docker_db == "true":
+    print("using docker compose db")
+    MC = MongoClient("mongo")
+else:
+    print("using local db")
+    MC = MongoClient("localhost")
+
 database = MC["La_fromage"]
 user_data = database["users"]
 moz_data = database["Mozeralla"]
 ched_data = database["Cheddar"]
 brie_data = database["Brie"]
+
+def changecolorgen(user):
+    changedcolor = None
+    if user.get("profilecolor")!= None:
+        hexval = {"red":"#FF7276","pink":"#fff0f0","orange":"#ffd6a5","yellow":"#fbf8cc","green":"#b9fbc0","blue":"#bcf4de","purple":"#b8b8ff"}
+        colorlist = user["profilecolor"]
+        colorstring = ""
+        for colors in colorlist:
+            colors = hexval[colors]
+            colorstring += ", " + colors
+        changedcolor = "background: linear-gradient(0deg" + colorstring + " 100%)!important;"
+    return changedcolor
 
 def check_user(authtoken):
     hashed_auth = hashlib.sha256(authtoken.encode()).hexdigest()
@@ -27,24 +54,24 @@ def recommendation_gen_algo(cheese_list):
         if one_cheese == "Mozeralla":
             mat = moz_data.find({})
             for person in mat:
-                custom_dict = {"username":person["username"], "age":person["age"], "catchphrase": person["catchphrase"]}
+                custom_dict = person
                 if custom_dict not in matches:
                     matches.append(custom_dict)
         elif one_cheese == "Brie":
             mat = brie_data.find({})
             for person in mat:
-                custom_dict = {"username":person["username"], "age":person["age"], "catchphrase": person["catchphrase"]}
+                custom_dict = person
                 if custom_dict not in matches:
                     matches.append(custom_dict)
         else:
             mat = ched_data.find({})
             for person in mat:
-                custom_dict = {"username":person["username"], "age":person["age"], "catchphrase": person["catchphrase"]}
+                custom_dict = person
                 if custom_dict not in matches:
                     matches.append(custom_dict)
     second_list = user_data.find({})
     for all_people in second_list:
-        custom_dict = {"username":all_people["username"], "age":all_people["age"], "catchphrase": all_people["catchphrase"]}
+        custom_dict = all_people
         if custom_dict not in matches:
             matches.append(custom_dict)
     return matches
@@ -55,25 +82,33 @@ def add_nosniff(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
+
+
+
 @app.route("/")
 def serve_first():
+    colorChange = changecolorgen
+    cheesebannerlink = url_for('static', filename='cheesebanner.jpg')
     if "authtoken" in request.cookies:
         authtoken = request.cookies.get("authtoken")
         user = check_user(authtoken)
         if user == "None":
             matches = user_data.find({})
-            response = make_response(render_template("index.html", dates=matches, user= "None"))
+
+            response = make_response(render_template("index.html", dates=matches, user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
+
             return response
         else:
             cheese_list = user["cheese"]
             matches = recommendation_gen_algo(cheese_list)
-            response = make_response(render_template("index.html", dates=matches, user=user["username"]))
+            response = make_response(render_template("index.html", dates=matches, user=user["username"],cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
+
             return response
             
     matches = user_data.find({})
-    response = make_response(render_template("index.html",dates=matches, user= "None"))
+    response = make_response(render_template("index.html",dates=matches, user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
     response.headers["Content-Type"] = "text/html"
     return response
 
@@ -164,25 +199,95 @@ def login_user():
 
 @app.route("/static/indexstyle.css")
 def serve_css():
-    response = send_from_directory("/static","indexstyle.css")
+    response = send_from_directory("static","indexstyle.css")
     response.headers["Content-Type"] = "text/css"
     return response
 
+@app.route("/static/changecolor.js")
+def serve_profile_js():
+    response = send_from_directory("static","changecolor.js")
+    response.headers["Content-Type"] = "text/javascript"
+    return response
+
+@app.route("/profile/<username>")
+def serve_profile(username):
+    viewer = "None"
+    if "authtoken" in request.cookies:
+        authtoken = request.cookies.get("authtoken")
+        viewer = check_user(authtoken)
+        viewer = viewer["username"]
+    user = user_data.find_one({"username": username})
+    pfp =""
+    if user.get("profilepic") is not None:
+        pfp = user["profilepic"]
+    changecolor = None
+    if user.get("profilecolor") is not None:
+        changecolor = changecolorgen(user)
+    response = make_response(render_template("profile.html",user=user["username"],catchphrase=user["catchphrase"],age=user["age"],profilepic=pfp,viewer=viewer,changedcolor=changecolor))
+    return response
+@app.route('/images/<name>')
+def download_file(name):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], name)
+
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+    return '.' in filename and \
+       filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+@app.route("/profile/<username>/upload", methods=["POST"])
+def save_profilepic(username):
+    authtoken = request.cookies.get("authtoken")
+    viewer = check_user(authtoken)
+    if viewer["username"] == username:
+        if 'pfp' not in request.files:
+            print('No file part')
+            return redirect(request.url.replace("/upload", ""))
+        file = request.files['pfp']
+        if file.filename == '':
+            print('No selected file')
+            return redirect(request.url.replace("/upload", ""))
+
+        if file and allowed_file(file.filename):
+            print('uploaded successfully')
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            with Image.open("images/"+filename) as im:
+                ImageOps.fit(im, (1000, 1000)).save("images/"+filename)
+            user_data.update_one({"username": username}, {"$set": {"profilepic": url_for('download_file', name=filename)}})
+
+    return redirect(request.url.replace("/upload", ""))
+@app.route("/profile/<username>/changecolor", methods=["POST"])
+def changecolor(username):
+    print(request.get_json())
+
+    colors = request.json
+    print(request)
+
+    authtoken = request.cookies.get("authtoken")
+    user = check_user(authtoken)
+    if user is not None and user["username"] == username:
+        user_data.update_one({"username": user["username"]}, {"$set": {"profilecolor": colors}})
+    return redirect(request.url.replace("/changecolor", ""))
+
+
 @app.route("/static/homepage.css")
 def serve_css2():
-    response = send_from_directory("/static","homepage.css")
+    response = send_from_directory("static","homepage.css")
     response.headers["Content-Type"] = "text/css"
     return response, 200
 
 @app.route("/static/functions.js")
 def serve_js():
-    response = send_from_directory("/static","loginandcreate.js")
+    response = send_from_directory("static","loginandcreate.js")
     response.headers["Content-Type"] = "text/javascript"
     return response, 200
-
+@app.route("/static/profilecss.css")
+def serve_profilecss():
+    response = send_from_directory("static","profilecss.css")
+    response.headers["Content-Type"] = "text/css"
+    return response, 200
 @app.route("/static/logo.png")
 def serve_logo():
-    response = send_from_directory("/static","logo.png")
+    response = send_from_directory("static","logo.png")
     response.headers["Content-Type"] = "image/png"
     return response, 200
 
