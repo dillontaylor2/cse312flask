@@ -1,6 +1,7 @@
 from PIL import Image, ImageOps
 from flask import Flask, render_template, send_from_directory, redirect, request, make_response, url_for
 from pymongo import MongoClient
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import hashlib
 import os
 import uuid
@@ -10,6 +11,8 @@ from werkzeug.utils import secure_filename
 from flask_cors import CORS
 app = Flask(__name__, template_folder="templates")
 #CORS(app)
+# Initialize SocketIO and set the CORS option
+socketio = SocketIO(app, cors_allowed_origins="*")
 UPLOAD_FOLDER = 'images'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -82,8 +85,49 @@ def add_nosniff(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
+active_users = {}
 
+@socketio.on('connect')
+def handle_connect():
+    # Fetch user ID from cookies
+    user_id = request.cookies.get('user_id')
+    if not user_id:
+        emit('error', {'message': 'Unauthorized'})
+        # Disconnect unauthorized users
+        return False
+    # Store session ID
+    active_users[user_id] = request.sid
+    emit('status', {'message': 'Connected'}, broadcast=True)
 
+@socketio.on('disconnect')
+def handle_disconnect():
+    # Fetch the userID from cookies
+    user_id = request.cookies.get('user_id')
+    if user_id in active_users:
+        del active_users[user_id]
+    emit('status', {'message': f'User {user_id} disconnected'}, broadcast=True)
+
+@socketio.on('message')
+def handle_message(data):
+    user_id = request.cookies.get('user_id')
+    if not user_id:
+        emit('error', {'message': 'Unauthorized'})
+        return
+    message = data.get('message', '')
+    room = data.get('room', 'default')
+    emit('message', {'user': user_id, 'message': message}, room=room)
+
+@socketio.on('join')
+def handle_join(data):
+    room = data.get('room', 'default')
+    join_room(room)
+    emit('status', {'message': f'{request.cookies.get("user_id")} joined {room}'}, room=room)
+
+@socketio.on('leave')
+def handle_leave(data):
+    room = data.get('room', 'default')
+    leave_room(room)
+    emit('status', {'message': f'{request.cookies.get("user_id")} left {room}'}, room=room)
 
 @app.route("/")
 def serve_first():
@@ -316,4 +360,6 @@ def add_user_to_like():
         return redirect("/",code=302)
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8080)
+    # Changed block to run under socket
+    # app.run(debug=True, host="0.0.0.0", port=8080)
+    socketio.run(app, host="0.0.0.0", port=8080, debug=True, allow_unsafe_werkzeug=True)

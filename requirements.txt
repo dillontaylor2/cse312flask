@@ -6,3 +6,4 @@ jinja2
 Werkzeug
 pillow~=10.4.0
 Flask-Cors~=5.0.0
+flask-socketio
