@@ -4,8 +4,7 @@
     <meta name="viewport" content="width=device-width" />
     <title>Fromage</title>
     <script src="/static/loginandcreate.js" ></script>
-
-    <link rel="stylesheet" href="/static/homepage.css" >
+    <link rel="stylesheet" href="/static/homepage.css">
    <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Host+Grotesk:ital,wght@0,300..800;1,300..800&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Monsieur+La+Doulaise&family=Yesteryear&display=swap" rel="stylesheet"></head>
@@ -26,7 +25,7 @@
     </div>
     <div class="mainHello">
         <div id="banner">
-            <img src="{{ cheesebannerlink }}">
+            <img src="{{ cheesebannerlink }}" alt="Logo" class="logo">
         <h1 id="headline">Experience Fromance</h1>
         </div>
     </div>
@@ -48,40 +47,143 @@
         </div>
         {% endfor %}
     </div>
+    
+    <!-- Real-Time Chat Section -->
+    <div>
+        <h2>Live Chat</h2>
+        <ul id="chat-box"></ul>
+        <form id="chat-form">
+            <input id="chat-input" type="text" placeholder="Type your message..." required />
+            <button type="submit">Send</button>
+        </form>
+    </div>
+
+    <!-- Real-Time Posts Section -->
+    <div>
+        <h2>Posts</h2>
+        <ul id="post-list"></ul>
+        <form id="post-form">
+            <input id="post-input" type="text" placeholder="Share something..." required />
+            <button type="submit">Post</button>
+        </form>
+    </div>
 
     <script>
-        function like_user(sentence){
-            var inner = sentence.innerHTML;
-            if (inner === "Like") {
-                sentence.innerHTML = "Unlike"
+        function like_user(sentence) {
+            const inner = sentence.innerHTML;
+            sentence.innerHTML = (inner === "Like") ? "Unlike" : "Like";
+
+            // Extract user details from button attributes
+            const user_that_likes = sentence.getAttribute("user1");
+            const user_that_got_liked = sentence.getAttribute("user2");
+
+            if (!user_that_likes || !user_that_got_liked) {
+                console.error("User information is missing");
+                return;
             }
-            else {
-                sentence.innerHTML = "Like"
+
+            // Send the like/unlike request to the server
+            const body = JSON.stringify({
+                user_that_likes: user_that_likes,
+                user_that_got_liked: user_that_got_liked
+            });
+
+            fetch("/like_user", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: body
+            })
+                .then((response) => {
+                    if (response.status === 201) {
+                        return response.json();
+                    } else {
+                        throw new Error("Failed to update like status");
+                    }
+                })
+                .then((data) => {
+                    console.log("Like status updated:", data);
+                })
+                .catch((error) => {
+                    console.error("Error updating like status:", error);
+                });
+        }
+
+        // WebSocket Integration
+        const socket = io(); // Connect to the WebSocket server
+
+        // WebSocket Event Handlers
+        socket.on('connect', () => {
+            console.log('Connected to WebSocket server');
+        });
+
+        socket.on('user_connected', (data) => {
+            console.log(`${data.user} joined.`);
+        });
+
+        socket.on('user_disconnected', (data) => {
+            console.log(`${data.user} left.`);
+        });
+
+        // Handle incoming chat messages
+        socket.on('chat_message', (data) => {
+            const chatBox = document.getElementById('chat-box');
+            if (chatBox) {
+                const messageItem = document.createElement('li');
+                messageItem.textContent = `${data.user}: ${data.message}`;
+                chatBox.appendChild(messageItem);
+            } else {
+                console.error("Chat box element not found");
             }
-            var sent = sentence.outerHTML;
-            const splitted = sent.split(" ");
-            const user1 = splitted[2].toString().split("=");
-            const user_that_likes = user1[1].toString().replace(/"/g,"")
-            const user2 = splitted[3].toString().split("=");
-            const user_t = user2[1].toString().replace(/"/g,"")
-            const user_that_got_liked = user_t.split(">")[0]
-            // console.log(user_that_likes)
-            // console.log(user_that_got_liked)
-            const body = JSON.stringify(
-                {
-                    "user_that_likes": user_that_likes,
-                    "user_that_got_liked": user_that_got_liked
+        });
+
+        // Handle new posts
+        socket.on('new_post', (data) => {
+            const postList = document.getElementById('post-list');
+            if (postList) {
+                const postItem = document.createElement('li');
+                postItem.textContent = `${data.author}: ${data.content}`;
+                postList.appendChild(postItem);
+            } else {
+                console.error("Post list element not found");
+            }
+        });
+
+        // Chat Form Submission
+        const chatForm = document.getElementById('chat-form');
+        if (chatForm) {
+            chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const chatInput = document.getElementById('chat-input');
+                const message = chatInput.value.trim();
+                if (message) {
+                    socket.emit('chat_message', { message });
+                    chatInput.value = '';
+                } else {
+                    console.error("Chat input is empty");
                 }
-            );
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", "/like_user");
-            xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
-            xhr.onload = () => {
-                if (xhr.readyState == 4 && xhr.status == 201) {
-                console.log(JSON.parse(xhr.responseText));
+            });
+        } else {
+            console.error("Chat form element not found");
+        }
+
+        // Post Form Submission
+        const postForm = document.getElementById('post-form');
+        if (postForm) {
+            postForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const postInput = document.getElementById('post-input');
+                const content = postInput.value.trim();
+                if (content) {
+                    socket.emit('new_post', { content });
+                    postInput.value = '';
+                } else {
+                    console.error("Post input is empty");
                 }
-            };
-            xhr.send(body);
+            });
+        } else {
+            console.error("Post form element not found");
         }
     </script>
 </body>
