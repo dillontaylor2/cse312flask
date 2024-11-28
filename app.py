@@ -153,7 +153,7 @@ def get_posts():
 @app.route("/")
 def serve_first():
     colorChange = changecolorgen
-    cheesebannerlink = url_for('static', filename='logo.png')
+    cheesebannerlink = url_for('static', filename='cheesebanner.jpg')
     if "authtoken" in request.cookies:
         authtoken = request.cookies.get("authtoken")
         user = check_user(authtoken)
