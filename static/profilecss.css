@@ -1,0 +1,144 @@
+.topbar{
+    display: flex;
+    font-family: "Fira Sans", serif;
+    justify-content: space-between;
+    background-color: #D9908D;
+    position:sticky;
+    top:0px;
+    width: 100vw;
+    z-index: 5;
+    margin:-8px;
+}
+.active{
+    font-family: "Yesteryear";
+    color: #6B3A65;
+    font-size: 30px;
+    padding-left:20px;
+}
+.register a:hover{
+    background-color: #6B3A65;
+    color: white;
+}
+.register a{
+    padding:15px;
+    text-align:center;
+    margin-right:5px;
+    font-size: 15px;
+    height:inherit;
+    position: relative;
+    color: #4a235a;
+    display:inline-block;
+
+}
+
+.register {
+    margin-right:0px;
+    font-size: 15px;
+    height:inherit;
+
+}
+
+
+::-moz-selection { /* Code for Firefox */
+  color: #4A235A;
+  background: yellow;
+}
+
+div {
+  font-family: "Fira Sans", sans-serif;
+}
+
+body{
+    width:97vw;
+    height:97vh;
+}
+
+.profileContainer{
+    display: flex;
+    width: calc(100% + 20px);
+    margin-left:-10px;
+    margin-top:-10px;
+    height:inherit;
+    background: linear-gradient(0deg,#FFF0F0, #FFF0F0, #2adbff65 100%);
+    align-items: center;
+    padding:1%;
+
+}
+
+#window {
+    display:flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#buttons{
+    position: relative;
+    display: flex;
+    margin-top: -40px;
+}
+
+#changeColor{
+    margin-left: auto;
+    margin-right:20px;
+
+}
+
+
+#profilepic{
+    height: 30vw;
+    width:auto;
+    position: relative;
+    border-radius: 50%;
+    border: solid white 2px;
+
+}
+
+.profileDetails{
+    display: flex;
+    flex-direction: column;
+    height:70%;
+    padding-left: 20px;
+    align-content: center;
+}
+
+
+#username{
+    font-family: "Host Grotesk", sans-serif;
+    flex:3;
+    align-content: center;
+    font-size: 350%;
+    color: #012254;
+
+}
+
+#profiletitle{
+    flex:1;
+    color: #012254;
+    align-content: center;
+}
+#catchphrase{
+    flex:1;
+    color: #012254;
+
+
+}
+#age{
+    flex:1;
+    color: #012254;
+
+}
+a:link {
+      text-decoration: none;
+}
+
+a:visited {
+      text-decoration: none;
+}
+
+a:hover {
+      text-decoration: none;
+}
+
+a:active {
+      text-decoration: none;
+}
