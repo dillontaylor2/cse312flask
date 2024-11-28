@@ -6,7 +6,6 @@ import hashlib
 import os
 import uuid
 
-
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -87,8 +86,69 @@ def add_nosniff(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
+active_users = {}
+
+@socketio.on('connect')
+def handle_connect():
+    authtoken = request.cookies.get('authtoken')
+    user = check_user(authtoken) if authtoken else None
+    if user == "None" or user is None:
+        emit('error', {'message': 'Unauthorized'}, broadcast=False)
+        return False
+    username = user.get("username", "Guest")
+    emit('user_connected', {"username": username}, broadcast=True)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    authtoken = request.cookies.get('authtoken')
+    user = check_user(authtoken) if authtoken else None
+    if user != "None" and user is not None:
+        username = user.get("username", "Guest")
+        emit('user_disconnected', {"username": username}, broadcast=True)
+
+@socketio.on('chat_message')
+def handle_chat_message(data):
+    authtoken = request.cookies.get('authtoken')
+    user = check_user(authtoken) if authtoken else "Guest"
+    username = user.get("username", "Guest")
+    message = data.get("message", "")
+    if message:
+        emit('chat_message', {"username": username, "message": message}, broadcast=True)
 
 
+@socketio.on('new_post')
+def handle_new_post(data):
+    authtoken = request.cookies.get('authtoken')
+    user = check_user(authtoken) if authtoken else "Guest"
+    username = user.get("username", "Guest")
+    post_content = data.get("content", "")
+    if post_content:
+        post_id = str(uuid.uuid4())
+        posts_data.insert_one({"post_id": post_id, "content": post_content, "author": username})
+        emit('new_post', {"post_id": post_id, "author": username, "content": post_content}, broadcast=True)
+
+@socketio.on('join')
+def handle_join(data):
+    room = data.get('room', 'default')
+    authtoken = request.cookies.get('authtoken')
+    user = check_user(authtoken) if authtoken else "Guest"
+    username = user.get("username", "Guest")
+    join_room(room)
+    emit('status', {'message': f'{username} joined {room}'}, room=room)
+
+@socketio.on('leave')
+def handle_leave(data):
+    room = data.get('room', 'default')
+    authtoken = request.cookies.get('authtoken')
+    user = check_user(authtoken) if authtoken else "Guest"
+    username = user.get("username", "Guest")
+    leave_room(room)
+    emit('status', {'message': f'{username} left {room}'}, room=room)
+
+@app.route('/posts', methods=['GET'])
+def get_posts():
+    posts = list(posts_data.find({}, {"_id": 0}))
+    return jsonify(posts)
 
 @app.route("/")
 def serve_first():
@@ -272,7 +332,6 @@ def changecolor(username):
     if user is not None and user["username"] == username:
         user_data.update_one({"username": user["username"]}, {"$set": {"profilecolor": colors}})
     return redirect(request.url.replace("/changecolor", ""))
-
 
 @app.route("/static/homepage.css")
 def serve_css2():
