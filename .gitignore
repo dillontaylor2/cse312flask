@@ -1,2 +1,4 @@
 /images/
 /docker-debug.yml
+.venv
+.env
