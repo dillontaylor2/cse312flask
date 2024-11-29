@@ -115,9 +115,7 @@
         }
 
         // WebSocket Integration
-        const socket = io("wss://algorithmalchemists.me/", {
-            transports: ["websocket"], // Force WebSocket protocol if needed
-        });
+        const socket = io();
 
         // WebSocket Event Handlers
         socket.on('connect', () => {
