@@ -51,7 +51,11 @@
     <!-- Real-Time Chat Section -->
     <div>
         <h2>Live Chat</h2>
-        <ul id="chat-box"></ul>
+        <div id="chat-container" style="height: 300px; overflow-y: scroll; padding: 10px; border: 1px solid black;">
+            <ul id="chat-box" style="list-style-type: none; padding: 10px;"></ul>
+        </div>
+        <div style="padding: 10px;">
+        </div>
         <form id="chat-form">
             <input id="chat-input" type="text" placeholder="Type your message..." required />
             <button type="submit">Send</button>
@@ -67,7 +71,7 @@
             <button type="submit">Post</button>
         </form>
     </div>
-
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script>
         function like_user(sentence) {
             const inner = sentence.innerHTML;
@@ -119,11 +123,12 @@
         });
 
         socket.on('user_connected', (data) => {
-            console.log(`${data.user} joined.`);
+            var username = data.username
+            console.log(`${data.username} joined.`);
         });
 
         socket.on('user_disconnected', (data) => {
-            console.log(`${data.user} left.`);
+            console.log(`${data.username} left.`);
         });
 
         // Handle incoming chat messages
@@ -131,8 +136,9 @@
             const chatBox = document.getElementById('chat-box');
             if (chatBox) {
                 const messageItem = document.createElement('li');
-                messageItem.textContent = `${data.user}: ${data.message}`;
+                messageItem.textContent = `${data.username}: ${data.message}`;
                 chatBox.appendChild(messageItem);
+                chatBox.scrollTop = chatBox.scrollHeight; //auto scroll down
             } else {
                 console.error("Chat box element not found");
             }

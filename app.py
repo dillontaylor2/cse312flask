@@ -28,7 +28,7 @@ database = MC["La_fromage"]
 user_data = database["users"]
 posts_data = database["posts"]
 
-moz_data = database["Mozeralla"]
+moz_data = database["Mozzarella"]
 ched_data = database["Cheddar"]
 brie_data = database["Brie"]
 
@@ -55,7 +55,7 @@ def check_user(authtoken):
 def recommendation_gen_algo(cheese_list):
     matches = []
     for one_cheese in cheese_list:
-        if one_cheese == "Mozeralla":
+        if one_cheese == "Mozzarella":
             mat = moz_data.find({})
             for person in mat:
                 custom_dict = person
@@ -89,9 +89,9 @@ def add_nosniff(response):
 active_users = {}
 
 @socketio.on('connect')
-def handle_connect():
-    authtoken = request.cookies.get('authtoken')
-    user = check_user(authtoken) if authtoken else None
+def handle_connect(data):
+    authtoken = request.cookies.get('authtoken', "")
+    user = check_user(authtoken)
     if user == "None" or user is None:
         emit('error', {'message': 'Unauthorized'}, broadcast=False)
         return False
@@ -109,7 +109,7 @@ def handle_disconnect():
 @socketio.on('chat_message')
 def handle_chat_message(data):
     authtoken = request.cookies.get('authtoken')
-    user = check_user(authtoken) if authtoken else "Guest"
+    user = check_user(authtoken)
     username = user.get("username", "Guest")
     message = data.get("message", "")
     if message:
@@ -131,7 +131,7 @@ def handle_new_post(data):
 def handle_join(data):
     room = data.get('room', 'default')
     authtoken = request.cookies.get('authtoken')
-    user = check_user(authtoken) if authtoken else "Guest"
+    user = check_user(authtoken)
     username = user.get("username", "Guest")
     join_room(room)
     emit('status', {'message': f'{username} joined {room}'}, room=room)
@@ -140,7 +140,7 @@ def handle_join(data):
 def handle_leave(data):
     room = data.get('room', 'default')
     authtoken = request.cookies.get('authtoken')
-    user = check_user(authtoken) if authtoken else "Guest"
+    user = check_user(authtoken)
     username = user.get("username", "Guest")
     leave_room(room)
     emit('status', {'message': f'{username} left {room}'}, room=room)
@@ -218,7 +218,7 @@ def create_user():
         if password == confirmed_password:
             cheese = []
             if moz == "yes":
-                cheese.append("Mozeralla")
+                cheese.append("Mozzarella")
                 moz_data.insert_one({"username":username,"age":age,"catchphrase":catch_p})
             if ched == "yes":
                 cheese.append("Cheddar")
