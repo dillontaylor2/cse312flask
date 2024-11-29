@@ -52,10 +52,10 @@ docker_db = os.environ.get('DOCKER_DB', "false")
 
 if docker_db == "true":
     print("using docker compose db")
-    MC = MongoClient("mongo")
+    MC = MongoClient("mongo", 4080)
 else:
     print("using local db")
-    MC = MongoClient("localhost")
+    MC = MongoClient("localhost", 4080)
 
 database = MC["La_fromage"]
 user_data = database["users"]
