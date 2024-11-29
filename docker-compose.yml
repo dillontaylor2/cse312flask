@@ -2,7 +2,7 @@ services:
   mongo:
     image: mongo:4.2.5
     ports:
-      - '4080:27017'
+      - '127.0.0.1:4080:27017'
   app:
     build: .
     environment:
