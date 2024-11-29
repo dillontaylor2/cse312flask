@@ -5,16 +5,48 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 import hashlib
 import os
 import uuid
-
+import time
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+
 #CORS(app)
 # Initialize SocketIO and set the CORS option
+
 socketio = SocketIO(app, cors_allowed_origins="*")
 UPLOAD_FOLDER = 'images'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Configure Flask-Limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    # Default behavior: Limit to 50 requests in 10 seconds and block for 30 seconds
+    default_limits=["50 per 10 seconds"],
+    storage_uri="memory://",    # we could hook mongo into this
+)
+
+# so instead we doing it hot
+blocked_ips = {}
+
+
+def is_blocked(ip):
+    current_time = time.time()
+    if ip in blocked_ips and blocked_ips[ip] > current_time:
+        return True
+    elif ip in blocked_ips and blocked_ips[ip] <= current_time:
+        # Unblock
+        del blocked_ips[ip]
+    return False
+
+
+def block_ip(ip):
+    block_duration = 30  # seconds
+    blocked_ips[ip] = time.time() + block_duration
+
 
 docker_db = os.environ.get('DOCKER_DB', "false")
 
@@ -84,6 +116,13 @@ def recommendation_gen_algo(cheese_list):
         if custom_dict not in matches:
             matches.append(custom_dict)
     return matches
+
+
+@app.before_request
+def check_blocking():
+    ip = get_remote_address()
+    if is_blocked(ip):
+        return jsonify(error="Rate limit exceeded. You are blocked for 30 seconds."), 429
 
 
 @app.after_request
@@ -425,6 +464,11 @@ def add_user_to_like():
             response = make_response(render_template("index.html", user2=user2, dates=matches, user=user1))
             return response
         return redirect("/", code=302)
+
+
+@app.errorhandler(429)
+def ratelimit_exceeded(e):
+    return jsonify(error="Rate limit exceeded. Leave my app alone"), 429
 
 
 if __name__ == "__main__":
