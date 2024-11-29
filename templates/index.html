@@ -115,7 +115,7 @@
         }
 
         // WebSocket Integration
-        const socket = io(); // Connect to the WebSocket server
+        const socket = io("wss://algorithmalchemists.me"); // Connect to the WebSocket server
 
         // WebSocket Event Handlers
         socket.on('connect', () => {
