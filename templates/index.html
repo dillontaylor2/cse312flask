@@ -115,7 +115,10 @@
         }
 
         // WebSocket Integration
-        const socket = io();
+        const socket = io("https://algorithmalchemists.me/:8080", {
+            transports: ["websocket"]
+        });
+
 
         // WebSocket Event Handlers
         socket.on('connect', () => {
