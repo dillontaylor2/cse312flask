@@ -1,81 +1,219 @@
-body {
-  background-color: white;
-  font-family: "Comic Sans MS";
-  font-size: 14px;
-  overflow: scroll;
-  margin: 0;
-  padding: 0;
+.topbar{
+    display: flex;
+    font-family: "Fira Sans", serif;
+    justify-content: space-between;
+    background-color: #D9908D;
+    position:sticky;
+    top:0px;
+    width: 100%;
+    z-index: 5;
+    margin:-7px;
+    #border-bottom: white solid 3px;
 }
 
-.topbar {
-  background-color: aqua;
-  overflow: hidden;
-  text-align: center;
-  font-size: 16px;
+
+.active{
+    font-family: "Yesteryear";
+    color: #6B3A65;
+    font-size: 30px;
+    padding-left:20px;
+}
+.register a:hover{
+    background-color: #6B3A65;
+    color: white;
+}
+.register a{
+    padding:15px;
+    text-align:center;
+    margin-right:5px;
+    font-size: 15px;
+    height:inherit;
+    position: relative;
+    color: #4a235a;
+    display:inline-block;
+
 }
 
-.topbar a {
-  float: left;
-  color: black;
-  text-align: center;
-  padding: 14px 16px;
-  font-size: 16px;
+.register {
+    margin-right:0px;
+    font-size: 15px;
+    height:inherit;
+
 }
 
-.topbar a:hover {
-  background-color: grey;
-  color: white;
+
+::-moz-selection { /* Code for Firefox */
+  color: #4A235A;
+  background: yellow;
 }
 
-.mainHello {
-  padding-left: 16px;
+body{
+    background: linear-gradient(0deg, #4a235a, #704267 100%);
+    background-size:cover;
+    background-attachment: fixed;
+    width:100%;
+    height:100%;
+    font-family: "Fira Sans", serif;
+    overflow-x: hidden;
 }
 
-.logo {
-  align-content: center;
-  text-align: center;
-  width: 150px;
-  height: auto;
+#headline:before{
+    content: "Experience F r o m a n c e";
+    color: #D9908D;
+    font-family: 'Merriwether'!important;
+    float:left;
+    margin-top:-55px;
+    font-size:50px;
+    position:absolute;
+    left:0;
+    bottom:0;
+    margin-bottom:-5px;
+    z-index: -1;
+    padding-left:10px;
+    margin-left:-5px;
+
+
+}
+#headline{
+    z-index: 1;
+    color: #4A235A;
+    font-family: 'Merriwether'!important;
+    font-weight: 300;
+    font-style: normal;
+    margin-left:20px;
+    position: absolute;
+    font-size:50px;
+    margin-top: 30vh;
+    margin-right:auto;
+    padding-left:10px;
+    left:0;
+    text-align:left;
+    border-radius:20px;
+    width:550px;
+}
+.mainhello{
+    height:40%;
+    left:0;
+
 }
 
-.Profiles {
-  padding-top: 16px;
-  padding-left: 16px;
-  overflow-y: scroll;
-  white-space: nowrap;
+#banner img{
+
+    background-color:#6B3A65;
+    width: 100%;
+    height:100%;
+    object-fit: cover;
+    float:left;
+}
+#banner:before{
+
+    content: " ";
+    height:100%;
+    width:110%;
+    left:0px;
+    display: inline-block;
+    position:absolute;
+    background:rgba(66, 56, 88, .5);
+}
+#banner{
+    margin-left:-20px;
+    height:100%;
+    position: relative;
+    overflow:hidden;
+}
+#banner:after{
+    z-index:2;
+    color: #d78f8c;
+    position: relative;
+    font-size:15px;
+    right:10px;
+    float:right;
+    margin-top:-20px;
+    content: 'Photo by Jez Timms on Unsplash';
+    font-family: "Fira Sans", serif;
+
 }
 
-.profileContainer {
-  gap: 10px;
-  grid-template-columns: repeat(6, 1fr);
-  padding-left: 16px;
-  height: 300px;
-  width: 100%;
-  overflow-y: scroll;
+
+#profiletitle{
+    text-align:center;
+    color: #edc531;
+    font-family: "Fira Sans", serif;
+
+}
+.Profiles{
+    display: flex;
+     flex-wrap: wrap;
+    justify-content: space-evenly;
+    padding:10px;
+
+}
+.profileContainer{
+    width:300px;
+    height:350px;
+}
+.box:before{
+    z-index: 0;
+
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin:5%;
+
+    width: 90%;
+    height: 90%;
+    background:white;
+    opacity: .9;
+    border-radius: 3px;
+}
+.box{
+    position:absolute;
+    width:auto;
+    height:auto;
+    padding-right:100px;
+    padding-left:100px;
+    padding-top:30px;
+    margin-bottom:20px;
+    padding-bottom:30px;
+    background: #6B3A65;
+    border-radius:3px;
+    overflow:auto;
+    text-align: center;
+    color:black;
+}
+.box > *{
+    position:relative;
+}
+.box >h2>a{
+    text-align:center;
+    color: black;
+    font-family: "Fira Sans", serif;
+
+}
+.box >h2>a:hover{
+    text-align:center;
+    color: #582f5f;
+
+}
+#pfp{
+    height:100px;
+    border: 2px solid white;
+
+
+}
+ a:link {
+      text-decoration: none;
 }
 
-.box {
-  background: linear-gradient(to right, lightblue, lightpink);
-  border: 1px solid black;
-  padding: 16px;
-  text-align: center;
-  border-radius: 10px;
-  overflow-y: scroll;
+a:visited {
+      text-decoration: none;
 }
 
-.message {
-  border-radius: 10px;
-  text-align: center;
-  background-color: white;
-  border: 1px solid black;
+a:hover {
+      text-decoration: none;
 }
 
-.pfp {
-  width: 200px;
-  height: 200px;
-}
-
-#toggle_like.active {
-  background-color: red;
-  color: white;
+a:active {
+      text-decoration: none;
 }
