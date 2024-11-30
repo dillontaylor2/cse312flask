@@ -3,7 +3,7 @@ services:
   mongo:
     image: mongo:4.2.5
     ports:
-      - '27017:27017'
+      - '15362:15362'
   app:
     build: .
     environment:

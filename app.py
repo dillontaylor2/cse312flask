@@ -27,7 +27,6 @@ else:
 database = MC["La_fromage"]
 user_data = database["users"]
 posts_data = database["posts"]
-
 moz_data = database["Mozzarella"]
 ched_data = database["Cheddar"]
 brie_data = database["Brie"]
@@ -51,32 +50,42 @@ def check_user(authtoken):
         return "None"
     else:
         return found_user
-    
-def recommendation_gen_algo(cheese_list):
+
+def check_custom_dict_and_matches(custom_dict,matches):
+    for mat in matches:
+        if custom_dict["username"] == mat["username"]:
+            return False
+    return True
+
+def recommendation_gen_algo(cheese_list,liked_user_list):
     matches = []
     for one_cheese in cheese_list:
         if one_cheese == "Mozzarella":
             mat = moz_data.find({})
             for person in mat:
                 custom_dict = person
-                if custom_dict not in matches:
+                bo = check_custom_dict_and_matches(custom_dict,matches)
+                if bo and custom_dict["username"] not in liked_user_list:
                     matches.append(custom_dict)
         elif one_cheese == "Brie":
             mat = brie_data.find({})
             for person in mat:
                 custom_dict = person
-                if custom_dict not in matches:
+                bo = check_custom_dict_and_matches(custom_dict,matches)
+                if bo and custom_dict["username"] not in liked_user_list:
                     matches.append(custom_dict)
         else:
             mat = ched_data.find({})
             for person in mat:
                 custom_dict = person
-                if custom_dict not in matches:
+                bo = check_custom_dict_and_matches(custom_dict,matches)
+                if bo and custom_dict["username"] not in liked_user_list:
                     matches.append(custom_dict)
     second_list = user_data.find({})
     for all_people in second_list:
         custom_dict = all_people
-        if custom_dict not in matches:
+        bo = check_custom_dict_and_matches(custom_dict,matches)
+        if bo and custom_dict["username"] not in liked_user_list:
             matches.append(custom_dict)
     return matches
 
@@ -150,6 +159,13 @@ def get_posts():
     posts = list(posts_data.find({}, {"_id": 0}))
     return jsonify(posts)
 
+def find_user_file_with_username(username):
+    found_user = user_data.find_one({"username": username})
+    if found_user is None:
+        return "None"
+    else:
+        return found_user 
+
 @app.route("/")
 def serve_first():
     colorChange = changecolorgen
@@ -159,21 +175,26 @@ def serve_first():
         user = check_user(authtoken)
         if user == "None":
             matches = user_data.find({})
-
-            response = make_response(render_template("index.html", dates=matches, user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+            liked_users = []
+            response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches,user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
 
             return response
         else:
             cheese_list = user["cheese"]
-            matches = recommendation_gen_algo(cheese_list)
-            response = make_response(render_template("index.html", dates=matches, user=user["username"],cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+            matches = recommendation_gen_algo(cheese_list,user["liked_user"])
+            liked_users = []
+            for every_like in user["liked_user"]:
+                user_file = find_user_file_with_username(every_like)
+                liked_users.append(user_file)
+            response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches, user=user["username"],cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
 
             return response
             
     matches = user_data.find({})
-    response = make_response(render_template("index.html",dates=matches, user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+    liked_users = []
+    response = make_response(render_template("index.html",dates=liked_users, soon_to_be_dates = matches, user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
     response.headers["Content-Type"] = "text/html"
     return response
 
@@ -203,7 +224,7 @@ def logout():
 def create_user():
     username = request.form.get("username")
     password = request.form.get("password")
-    moz = request.form.get("Mozeralla")
+    moz = request.form.get("Mozzarella")
     ched = request.form.get("Cheddar")
     brie = request.form.get("Brie")
     age = request.form.get("age")
@@ -217,18 +238,18 @@ def create_user():
     if found_user is None:
         if password == confirmed_password:
             cheese = []
-            if moz == "yes":
+            if moz == "Mozzarella":
                 cheese.append("Mozzarella")
-                moz_data.insert_one({"username":username,"age":age,"catchphrase":catch_p})
-            if ched == "yes":
+                moz_data.insert_one({"username":username,"age":age,"catchphrase":catch_p,"profilepic":"/static/default.jpg"})
+            if ched == "Cheddar":
                 cheese.append("Cheddar")
-                ched_data.insert_one({"username":username,"age":age,"catchphrase":catch_p})
-            if brie == "yes":
+                ched_data.insert_one({"username":username,"age":age,"catchphrase":catch_p,"profilepic":"/static/default.jpg"})
+            if brie == "Brie":
                 cheese.append("Brie")
-                brie_data.insert_one({"username":username,"age":age,"catchphrase":catch_p})
+                brie_data.insert_one({"username":username,"age":age,"catchphrase":catch_p,"profilepic":"/static/default.jpg"})
             fin_pass = password + salt
             fin_pass = hashlib.sha256(fin_pass.encode()).hexdigest()
-            user_data.insert_one({"username": username, "password": fin_pass, "cheese": cheese,"authtoken": "","liked_user":[],"match":[],"age":age,"catchphrase":catch_p})
+            user_data.insert_one({"username": username, "password": fin_pass, "cheese": cheese,"authtoken": "","liked_user":[],"match":[],"age":age,"catchphrase":catch_p,"profilepic":"/static/default.jpg"})
             
             response = redirect("/login",code=302)
             return response
@@ -318,6 +339,14 @@ def save_profilepic(username):
             with Image.open("images/"+filename) as im:
                 ImageOps.fit(im, (1000, 1000)).save("images/"+filename)
             user_data.update_one({"username": username}, {"$set": {"profilepic": url_for('download_file', name=filename)}})
+            cheese_list = viewer["cheese"]
+            for cheese in cheese_list:
+                if cheese == "Mozzarella":
+                    moz_data.update_one({"username": username}, {"$set": {"profilepic": url_for('download_file', name=filename)}})
+                elif cheese == "Cheddar":
+                    ched_data.update_one({"username": username}, {"$set": {"profilepic": url_for('download_file', name=filename)}})
+                elif cheese == "Brie":
+                    brie_data.update_one({"username": username}, {"$set": {"profilepic": url_for('download_file', name=filename)}})
 
     return redirect(request.url.replace("/upload", ""))
 @app.route("/profile/<username>/changecolor", methods=["POST"])
@@ -364,7 +393,7 @@ def add_user_to_like():
         return redirect("/",code=302)
     found_user = user_data.find_one({"username":user1})
     liked_user = found_user["liked_user"]
-    matches = recommendation_gen_algo(found_user["cheese"])
+    matches = recommendation_gen_algo(found_user["cheese"],found_user["liked_user"])
     if user2 in liked_user:
         liked_user.remove(user2)
         user_data.update_one({"username":user1},{"$set" : {"liked_user": liked_user}})
@@ -374,6 +403,7 @@ def add_user_to_like():
         user_data.update_one({"username":user1},{"$set" : {"liked_user": liked_user}})
         found_user2 = user_data.find_one({"username":user2})
         liked_user2 = found_user2["liked_user"]
+        return "It works till here"
         if user1 in liked_user2:
             response = make_response(render_template("index.html",user2=user2,dates=matches,user=user1))
             return response
