@@ -20,6 +20,8 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 UPLOAD_FOLDER = 'images'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+
+# -- Start rate limit code
 # Configure Flask-Limiter
 limiter = Limiter(
     get_remote_address,
@@ -46,6 +48,7 @@ def is_blocked(ip):
 def block_ip(ip):
     block_duration = 30  # seconds
     blocked_ips[ip] = time.time() + block_duration
+# -- end rate limit starter
 
 
 docker_db = os.environ.get('DOCKER_DB', "false")
@@ -128,6 +131,7 @@ def recommendation_gen_algo(cheese_list,liked_user_list):
     return matches
 
 
+# Rate limit
 @app.before_request
 def check_blocking():
     ip = get_remote_address()
