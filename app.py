@@ -1,5 +1,5 @@
 from PIL import Image, ImageOps
-from flask import Flask, render_template, send_from_directory, redirect, request, make_response, url_for, jsonify
+from flask import Flask, render_template, send_from_directory, redirect, request, make_response, url_for, jsonify, abort
 from pymongo import MongoClient
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import hashlib
@@ -132,7 +132,7 @@ def recommendation_gen_algo(cheese_list,liked_user_list):
 def check_blocking():
     ip = get_remote_address()
     if is_blocked(ip):
-        return jsonify(error="Rate limit exceeded. You are blocked for 30 seconds."), 429
+        abort(429)
 
     # Check Flask-Limiter
     # I have officially lost myself in how im blocking the ip
@@ -140,7 +140,7 @@ def check_blocking():
         limiter.check()
     except Exception:
         block_ip(ip)
-        return jsonify(error="Rate limit exceeded. You are blocked for 30 seconds."), 429
+        abort(429)
 
 
 @app.errorhandler(429)
