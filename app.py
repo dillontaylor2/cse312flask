@@ -136,6 +136,7 @@ def check_blocking():
 
     # Check Flask-Limiter
     # I have officially lost myself in how im blocking the ip
+    # HOW DID I MISS THAT LINE IT WORKS NOW
     try:
         limiter.check()
     except Exception:
@@ -502,11 +503,6 @@ def add_user_to_like():
             response = make_response(render_template("index.html", user2=user2, dates=matches, user=user1))
             return response
         return redirect("/", code=302)
-
-
-@app.errorhandler(429)
-def ratelimit_exceeded(e):
-    return jsonify(error="Rate limit exceeded. Leave my app alone"), 429
 
 
 if __name__ == "__main__":
