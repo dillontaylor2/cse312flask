@@ -132,7 +132,14 @@ def recommendation_gen_algo(cheese_list,liked_user_list):
 def check_blocking():
     ip = get_remote_address()
     if is_blocked(ip):
-        return jsonify(error="Rate limit exceeded. You are blocked for 30 seconds."), 429
+        return jsonify(error="Rate limit exceeded. Leave my app alone. You are blocked for 30 seconds."), 429
+
+
+@app.errorhandler(429)
+def ratelimit_exceeded(e):
+    ip = get_remote_address()
+    block_ip(ip)
+    return jsonify(error="Rate limit exceeded. Leave my app alone. You are blocked for 30 seconds."), 429
 
 
 @app.after_request
