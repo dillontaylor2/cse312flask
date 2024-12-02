@@ -91,43 +91,40 @@ def recommendation_gen_algo(cheese_list,liked_user_list):
             matches.append(custom_dict)
     return matches
 
+# Update active users dynamically
+def update_user_list():
+    users = [entry["username"] for entry in posts_data.find() if "username" in entry]
+    socketio.emit('update_user_list', users)
+
 @app.after_request
 def add_nosniff(response):
     # if "X-Content-Type-Options" in response.headers:
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
-active_users = {}
+active_users = set()
 
 @socketio.on('connect')
-def handle_connect(data):
+def handle_connect():
     authtoken = request.cookies.get('authtoken', "")
     user = check_user(authtoken)
-    if user == "None" or user is None:
-        emit('error', {'message': 'Unauthorized'}, broadcast=False)
+    if not user or user == "None":
+        emit('error', {'message': 'Unauthorized'})
         return False
-    username = user.get("username", "Guest")
-    posts_data.insert_one({"username": username})
-    fin_data = posts_data.find({})
-    users = []
-    for entry in fin_data:
-        print(entry)
-        users.append(entry["username"])
-    emit('user_connected', users, broadcast=True)
 
+    username = user.get("username", "Guest")
+    if not posts_data.find_one({"username": username}):
+        posts_data.insert_one({"username": username})
+    update_user_list()
 
 @socketio.on('disconnect')
 def handle_disconnect():
     authtoken = request.cookies.get('authtoken')
     user = check_user(authtoken) if authtoken else None
-    if user != "None" and user is not None:
-        username = user.get("username", "Guest")
+    if user and user != "None":
+        username = user["username"]
         posts_data.delete_one({"username": username})
-        fin_data = posts_data.find({})
-        users = []
-        for entry in fin_data:
-            users.append(entry["username"])
-        emit('user_disconnected', users, broadcast=True)
+        update_user_list()
 
 @socketio.on('chat_message')
 def handle_chat_message(data):
@@ -227,45 +224,90 @@ def serve_dms():
 DMdata = {}
 
 def addDMmessage(user1, user2, message):
-    attempt1 = DMdata.get(user1+user2, None)
-    attempt2 = DMdata.get(user2+user1, None)
-    if attempt1 is None and attempt2 is None:
-        DMdata[user1+user2] = []
-        DMdata[user1+user2].append(message)
-    if attempt1 is not None and attempt2 is None:
-        DMdata[user1+user2].append(message)
-    if attempt2 is not None and attempt1 is None:
-        DMdata[user2+user1].append(message)
-    return
+    # Create a consistent key for the conversation
+    conversation_key = f"{user1}_{user2}" if f"{user1}_{user2}" in DMdata else f"{user2}_{user1}"
+
+    # Initialize the conversation if it doesn't exist
+    if conversation_key not in DMdata:
+        DMdata[conversation_key] = []
+
+    # Append the message to the conversation
+    DMdata[conversation_key].append({
+        "sender": user1,
+        "message": message
+    })
 
 def getDMstruct(user1, user2):
-    attempt1 = DMdata.get(user1 + user2, None)
-    attempt2 = DMdata.get(user2 + user1, None)
-    if attempt1 is not None and attempt2 is None:
-        return attempt1
-    if attempt2 is not None and attempt1 is None:
-        return attempt2
-    return False
+    # Create a consistent key for the conversation
+    conversation_key = f"{user1}_{user2}" if f"{user1}_{user2}" in DMdata else f"{user2}_{user1}"
+
+    # Return the conversation if it exists
+    return DMdata.get(conversation_key, [])
 
 @socketio.on('send_dm_message')
-def handle_chat_message(data):
+def handle_dm_message(data):
     authtoken = request.cookies.get('authtoken')
     user = check_user(authtoken)
-    username = user.get("username", "Guest")
-    message = data.get("message", "")
-    sendingTo = data.get('recipient', "")
-    if message and sendingTo:
-        addDMmessage(username, sendingTo, message)
-        emit('chat_message', {"username": username, "message": message}, broadcast=True)
+    if not user:
+        return {"status": "error", "message": "Unauthorized"}
+    
+    sender = user.get("username", "Guest")
+    recipient = data.get('recipient', "")
+    message = data.get('message', "")
+    
+    if not recipient or not message:
+        return {"status": "error", "message": "Recipient or message missing"}
+
+    # Add the message to the DM structure
+    addDMmessage(sender, recipient, message)
+
+    # Notify the recipient if connected
+    emit("dm_message", {"username": sender, "message": message, "recipient": recipient}, broadcast=True)
+
+    return {"status": "success"}
 
 @socketio.on("get_dm_message_history")
-def get_dm_message_history(data):
+def handle_get_dm_message_history(data):
     authtoken = request.cookies.get('authtoken')
     user = check_user(authtoken)
     username = user.get("username", "Guest")
     recipient = data.get('recipient', "")
-    if username is not "Guest" and recipient is not "":
-        emit("return_dm_history", {"history": getDMstruct(username, recipient)}, broadcast=True)
+
+    if username == "Guest" or not recipient:
+        emit('error', {'message': 'Invalid request'})
+        return
+
+    # Retrieve the conversation history
+    history = getDMstruct(username, recipient)
+    emit("return_dm_history", {"history": history})
+
+@socketio.on("get_user_list")
+def handle_get_user_list(data=None):
+    authtoken = request.cookies.get("authtoken")
+    user = check_user(authtoken)
+    if user == "None" or user is None:
+        emit("error", {"message": "Unauthorized"})
+        return
+
+    # Emit the current active user list
+    emit("user_list", {"users": list(active_users)})
+
+@app.route("/get_dm_users", methods=["GET"])
+def get_dm_users():
+    fin_data = posts_data.find({})
+    users = []
+    for entry in fin_data:
+        if "username" in entry:
+            users.append(entry["username"])
+    return jsonify({"users": users})
+
+@app.route("/get_current_user", methods=["GET"])
+def get_current_user():
+    authtoken = request.cookies.get("authtoken")
+    user = check_user(authtoken)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify({"username": user["username"]}), 200
 
 @app.route("/login")
 def serve_login():
