@@ -7,6 +7,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 import hashlib
 import os
 import uuid
+import json
 
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
@@ -35,7 +36,7 @@ brie_data = database["Brie"]
 
 def changecolorgen(user):
     changedcolor = None
-    if user.get("profilecolor")!= None:
+    if user is not None and user.get("profilecolor") is not None:
         hexval = {"red":"#FF7276","pink":"#fff0f0","orange":"#ffd6a5","yellow":"#fbf8cc","green":"#b9fbc0","blue":"#bcf4de","purple":"#b8b8ff"}
         colorlist = user["profilecolor"]
         colorstring = ""
@@ -49,7 +50,7 @@ def check_user(authtoken):
     hashed_auth = hashlib.sha256(authtoken.encode()).hexdigest()
     found_user = user_data.find_one({"authtoken": hashed_auth})
     if found_user is None:
-        return "None"
+        return
     else:
         return found_user
 
@@ -93,7 +94,9 @@ def recommendation_gen_algo(cheese_list,liked_user_list):
 
 # Update active users dynamically
 def update_user_list():
-    users = [entry["username"] for entry in posts_data.find() if "username" in entry]
+    users = [entry["username"] for entry in active_users if "username" in entry]
+
+
     socketio.emit('update_user_list', users)
 
 @app.after_request
@@ -102,29 +105,37 @@ def add_nosniff(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
-active_users = set()
+active_users = []
 
 @socketio.on('connect')
 def handle_connect():
     authtoken = request.cookies.get('authtoken', "")
     user = check_user(authtoken)
-    if not user or user == "None":
+    if not user or user is None:
         emit('error', {'message': 'Unauthorized'})
         return False
-
-    username = user.get("username", "Guest")
-    if not posts_data.find_one({"username": username}):
-        posts_data.insert_one({"username": username})
-    update_user_list()
+    else:
+        username = user.get("username", "Guest")
+        flag = True
+        for users in active_users:
+            if users["username"] == username:
+                flag = False
+        if flag:
+            active_users.append({"username":username,"profilepic":user.get("profilepic")})
+        emit("user",active_users, broadcast=True)
+        update_user_list()
 
 @socketio.on('disconnect')
 def handle_disconnect():
     authtoken = request.cookies.get('authtoken')
     user = check_user(authtoken) if authtoken else None
-    if user and user != "None":
-        username = user["username"]
-        posts_data.delete_one({"username": username})
-        update_user_list()
+    if user and user is not None:
+        username = user.get("username")
+        for activeuser in active_users:
+            if activeuser["username"] == username:
+                active_users.remove(activeuser)
+                emit("user_disconnected", active_users, broadcast=True)
+                update_user_list()
 
 @socketio.on('chat_message')
 def handle_chat_message(data):
@@ -173,7 +184,7 @@ def get_posts():
 def find_user_file_with_username(username):
     found_user = user_data.find_one({"username": username})
     if found_user is None:
-        return "None"
+        return
     else:
         return found_user 
 
@@ -184,20 +195,23 @@ def serve_first():
     if "authtoken" in request.cookies:
         authtoken = request.cookies.get("authtoken")
         user = check_user(authtoken)
-        if user == "None":
+        if user is None:
             matches = user_data.find({})
             liked_users = []
-            response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches,user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+            response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches,cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
 
             return response
         else:
+
             cheese_list = user["cheese"]
             matches = recommendation_gen_algo(cheese_list,user["liked_user"])
             liked_users = []
             for every_like in user["liked_user"]:
                 user_file = find_user_file_with_username(every_like)
-                liked_users.append(user_file)
+                if user_file is not None:
+                    liked_users.append(user_file)
+
             response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches, user=user["username"],cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
 
@@ -205,7 +219,8 @@ def serve_first():
             
     matches = user_data.find({})
     liked_users = []
-    response = make_response(render_template("index.html",dates=liked_users, soon_to_be_dates = matches, user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+
+    response = make_response(render_template("index.html",dates=liked_users, soon_to_be_dates = matches, user= None,cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
     response.headers["Content-Type"] = "text/html"
     return response
 
@@ -319,7 +334,7 @@ def serve_login():
 def logout():
     authtoken = request.cookies.get("authtoken")
     user = check_user(authtoken)
-    if user != "None":
+    if user != None:
         user_data.update_one({"username": user["username"]},{"$set" : {"authtoken": ""}})
     response = make_response(redirect("/"))
     response.set_cookie("authtoken", authtoken, httponly = True, max_age=-3600)
@@ -456,10 +471,8 @@ def save_profilepic(username):
     return redirect(request.url.replace("/upload", ""))
 @app.route("/profile/<username>/changecolor", methods=["POST"])
 def changecolor(username):
-    print(request.get_json())
 
     colors = request.json
-    print(request)
 
     authtoken = request.cookies.get("authtoken")
     user = check_user(authtoken)
@@ -492,25 +505,25 @@ def serve_logo():
 @app.route("/like_user", methods=["POST"])
 def add_user_to_like():
     req_json = request.get_json()
-    user1 = req_json["user_that_likes"]
-    user2 = req_json["user_that_got_liked"]
-    if user1 == "None" or user2 == "None":
-        return redirect("/",code=302)
-    found_user = user_data.find_one({"username":user1})
-    liked_user = found_user["liked_user"]
-    matches = recommendation_gen_algo(found_user["cheese"],found_user["liked_user"])
-    if user2 in liked_user:
-        liked_user.remove(user2)
-        user_data.update_one({"username":user1},{"$set" : {"liked_user": liked_user}})
-        return redirect("/",code=302)
-    else:
-        liked_user.append(user2)
-        user_data.update_one({"username":user1},{"$set" : {"liked_user": liked_user}})
-        found_user2 = user_data.find_one({"username":user2})
-        liked_user2 = found_user2["liked_user"]
-        if user1 in liked_user2:
-            #response = make_response(render_template("index.html",user2=user2,dates=matches,user=user1))
-            return jsonify(user1)
+    if request.cookies.get("authtoken") is not None:
+        user1 = check_user(request.cookies.get("authtoken"))
+        user2 = req_json["user_that_got_liked"]
+        if user1 == "None" or user2 == "None":
+            return redirect("/",code=302)
+        found_user = user_data.find_one({"username":user1.get("username")})
+        liked_user = found_user["liked_user"]
+        if user2 in liked_user:
+            user_data.update_one({"username":user1.get("username")},{"$pull" : {"liked_user": user2}})
+            return redirect("/",code=302)
+        else:
+            user_data.update_one({"username":user1.get("username")},{"$push" : {"liked_user": user2}})
+
+            found_user2 = user_data.find_one({"username":user2})
+            liked_user2 = found_user2["liked_user"]
+
+            if user1.get("username") in liked_user2:
+                #response = make_response(render_template("index.html",user2=user2,dates=matches,user=user1))
+                return jsonify(user2), 200
         return redirect("/",code=302)
 
 if __name__ == "__main__":

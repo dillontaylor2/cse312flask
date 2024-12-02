@@ -13,11 +13,11 @@
     <div class="topbar">
         <a class="active" href="/">fromage</a>
         <div class="register">
-            {% if user == "None" %}
+            {% if user == None%}
             <a href="/login">Log In</a>
             <a href="/register">Sign Up</a>
             {% endif %}
-        {% if user != "None" %}
+        {% if user != None %}
         <a href="/logout">Logout</a>
         <a href="/dms">Direct Messages</a>
         <a href="/profile/{{ user }}" id="profile" >{{ user }}</a>
@@ -38,7 +38,7 @@
     <div class="Profiles" style="overflow-y: scroll;">
         {% for person in dates %}
         <div class="profileContainer">
-            <div style="{{ colorchangegen(person) }}"class="box">
+            <div style="{{ colorchangegen(person) }}" class="box">
                 <img id="pfp" src="{{ person.get("profilepic") }}">
                 <h2><a href="/profile/{{ person["username"] }}">{{ person["username"] }}</a></h2>
                 <p>Age: {{ person["age"] }}</p>
@@ -129,42 +129,47 @@
         }
 
         // WebSocket Integration
-        const socket = io({transports: ['websocket']}); // Connect to the WebSocket server
+        //CHANGE TO WSS INSTEAD OF WS FOR SECURE
+        const socket = io("ws:"+String(window.location).replace(window.location.protocol,""),{transports: ['websocket']}); // Connect to the WebSocket server
 
         // WebSocket Event Handlers
         socket.on('connect', () => {
             console.log('Connected to WebSocket server');
         });
 
-        socket.on('user_connected', (data) => {
+        socket.on('user', (data) => {
             console.log(data)
-            const postList = document.getElementById('post-list');
-            postList.innerHTML = "";
-            if (postList) {
-                for (users of data) {
-                    var postItem = document.createElement('li');
-                    postItem.textContent = `${users}`;
-                    postItem.setAttribute('id',users);
-                    postList.appendChild(postItem);
-                }
-            } else {
-                console.error("Post list element not found");
+              const postList = document.getElementById('post-list');
+            postList.innerHTML =""
+            for (let user of data){
+               var postItem = document.createElement('img');
+                postItem.src = user["profilepic"];
+                postItem.setAttribute("style","max-width:20px; max-height:20px")
+                postItem.setAttribute('id', user["username"]);
+                postList.appendChild(postItem);
+                postItem = document.createElement('a');
+                postItem.href = "/profile/"+user["username"]
+                postItem.textContent = user["username"];
+                postItem.setAttribute('id', user["username"]);
+                postList.appendChild(postItem);
+
             }
-            console.log(`${data.username} joined.`);
         });
 
         socket.on('user_disconnected', (data) => {
             const postList = document.getElementById('post-list');
-            postList.innerHTML = "";
-            if (postList) {
-                for (users of data) {
-                    var postItem = document.createElement('li');
-                    postItem.textContent = `${users}`;
-                    postItem.setAttribute('id',users);
-                    postList.appendChild(postItem);
-                }
-            } else {
-                console.error("Post list element not found");
+            postList.innerHTML =""
+            for (let user of data){
+                var postItem = document.createElement('img');
+                postItem.src = user["profilepic"];
+                postItem.setAttribute("style","max-width:20px; max-height:20px")
+                postItem.setAttribute('id', user["username"]);
+                postList.appendChild(postItem);
+                postItem = document.createElement('div');
+                postItem.textContent = user["username"];
+                postItem.setAttribute('id', user["username"]);
+                postList.appendChild(postItem);
+
             }
             console.log(`${data.username} left.`);
         });
