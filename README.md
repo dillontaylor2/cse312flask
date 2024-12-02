@@ -16,6 +16,12 @@ now select your own profile in the upper left corner, or from the main page, and
 
 you can like other user's profiles, who knows, you may get a match!
 
+active user list displayed at the bottom
+
+dm list on the top (available to chat with active users)
+
+
+
 ## CODE FEATURES
 
 flask based server 
@@ -25,6 +31,8 @@ onload flashing javascript title
 file hosting with image uploads
 
 authentication on login + registration
+
+active user + dms using websockets
 
 
 
