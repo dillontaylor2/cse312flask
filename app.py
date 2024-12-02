@@ -403,10 +403,9 @@ def add_user_to_like():
         user_data.update_one({"username":user1},{"$set" : {"liked_user": liked_user}})
         found_user2 = user_data.find_one({"username":user2})
         liked_user2 = found_user2["liked_user"]
-        return "It works till here"
         if user1 in liked_user2:
-            response = make_response(render_template("index.html",user2=user2,dates=matches,user=user1))
-            return response
+            #response = make_response(render_template("index.html",user2=user2,dates=matches,user=user1))
+            return jsonify(user1)
         return redirect("/",code=302)
 
 if __name__ == "__main__":

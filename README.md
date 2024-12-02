@@ -1,8 +1,8 @@
-# FROMAGE - A CHEESE-BASED DATING SITE
+# FROMAGE - A CHEESE-BASED DATING SITE : https://algorithmalchemists.me/
 ## PART 3 OBJECTIVE 3
 if you don't want to read through all the features, it's the "change banner background" button on profiles that allows the user to change their banner
 
-shows up on homepage as well, but is uninteractable from outside user control & doesn't convey user information, and is not an upload (does not fall within p1o3 or p2o1, rest are unapplicable)
+Now connects you to your match! Like the person you like and if they like you back, you have a match.
 
 ## FEATURES
 

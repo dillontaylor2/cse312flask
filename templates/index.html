@@ -62,7 +62,13 @@
         </div>
         {% endfor %}
     </div>
-    
+    <div id="popup" style="display: none;">
+        <div style="text-align: center;">
+          <h2>We found a match!!</h2>
+          <p id="match_maker"></p>
+          <button onclick="closePopup()">Close</button>
+        </div>
+      </div>
     <!-- Real-Time Chat Section -->
     <div>
         <h2>Live Chat</h2>
@@ -114,12 +120,18 @@
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/like_user");
             xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
-            xhr.onload = () => {
-                if (xhr.readyState == 4 && xhr.status == 201) {
-                console.log(JSON.parse(xhr.responseText));
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                received = JSON.parse(xhr.responseText);
+                document.getElementById("popup").style.display = "block";
+                document.getElementById("match_maker").innerHTML = "We found a match for you, their name is " + received;
                 }
             };
             xhr.send(body);
+        }
+
+        function closePopup() {
+            document.getElementById("popup").style.display = "none";
         }
 
         // WebSocket Integration
