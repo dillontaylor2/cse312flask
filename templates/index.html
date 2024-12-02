@@ -135,7 +135,7 @@
         }
 
         // WebSocket Integration
-        const socket = io(); // Connect to the WebSocket server
+        const socket = io({transports: ['websocket']}); // Connect to the WebSocket server
 
         // WebSocket Event Handlers
         socket.on('connect', () => {
