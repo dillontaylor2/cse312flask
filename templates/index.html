@@ -13,18 +13,16 @@
     <div class="topbar">
         <a class="active" href="/">fromage</a>
         <div class="register">
-            {% if user == "None" %}
+            {% if user == None%}
             <a href="/login">Log In</a>
             <a href="/register">Sign Up</a>
             {% endif %}
-        {% if user != "None" %}
+        {% if user != None %}
         <a href="/logout">Logout</a>
+        <a href="/dms">Direct Messages</a>
         <a href="/profile/{{ user }}" id="profile" >{{ user }}</a>
         {% endif %}
         </div>
-
-
-        
     </div>
     <div class="mainHello">
         <div id="banner">
@@ -40,7 +38,7 @@
     <div class="Profiles" style="overflow-y: scroll;">
         {% for person in dates %}
         <div class="profileContainer">
-            <div style="{{ colorchangegen(person) }}"class="box">
+            <div style="{{ colorchangegen(person) }}" class="box">
                 <img id="pfp" src="{{ person.get("profilepic") }}">
                 <h2><a href="/profile/{{ person["username"] }}">{{ person["username"] }}</a></h2>
                 <p>Age: {{ person["age"] }}</p>
@@ -62,7 +60,13 @@
         </div>
         {% endfor %}
     </div>
-    
+    <div id="popup" style="display: none;">
+        <div style="text-align: center;">
+          <h2>We found a match!!</h2>
+          <p id="match_maker"></p>
+          <button onclick="closePopup()">Close</button>
+        </div>
+      </div>
     <!-- Real-Time Chat Section -->
     <div>
         <h2>Live Chat</h2>
@@ -79,12 +83,8 @@
 
     <!-- Real-Time Posts Section -->
     <div>
-        <h2>Posts</h2>
+        <h2>Users Online</h2>
         <ul id="post-list"></ul>
-        <form id="post-form">
-            <input id="post-input" type="text" placeholder="Share something..." required />
-            <button type="submit">Post</button>
-        </form>
     </div>
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script>
@@ -114,17 +114,23 @@
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/like_user");
             xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
-            xhr.onload = () => {
-                if (xhr.readyState == 4 && xhr.status == 201) {
-                console.log(JSON.parse(xhr.responseText));
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                received = JSON.parse(xhr.responseText);
+                document.getElementById("popup").style.display = "block";
+                document.getElementById("match_maker").innerHTML = "We found a match for you, their name is " + received;
                 }
             };
             xhr.send(body);
         }
 
-        // WebSocket Integration
-        const socket = io();
+        function closePopup() {
+            document.getElementById("popup").style.display = "none";
+        }
 
+        // WebSocket Integration
+        //CHANGE TO WSS INSTEAD OF WS FOR SECURE
+        const socket = io("ws:"+String(window.location).replace(window.location.protocol,""),{transports: ['websocket']}); // Connect to the WebSocket server
 
         // WebSocket Event Handlers
         socket.on('connect', () => {
@@ -135,12 +141,40 @@
             console.error("Connection error:", err);
         });
 
-        socket.on('user_connected', (data) => {
-            var username = data.username
-            console.log(`${data.username} joined.`);
+        socket.on('user', (data) => {
+            console.log(data)
+              const postList = document.getElementById('post-list');
+            postList.innerHTML =""
+            for (let user of data){
+               var postItem = document.createElement('img');
+                postItem.src = user["profilepic"];
+                postItem.setAttribute("style","max-width:20px; max-height:20px")
+                postItem.setAttribute('id', user["username"]);
+                postList.appendChild(postItem);
+                postItem = document.createElement('a');
+                postItem.href = "/profile/"+user["username"]
+                postItem.textContent = user["username"];
+                postItem.setAttribute('id', user["username"]);
+                postList.appendChild(postItem);
+
+            }
         });
 
         socket.on('user_disconnected', (data) => {
+            const postList = document.getElementById('post-list');
+            postList.innerHTML =""
+            for (let user of data){
+                var postItem = document.createElement('img');
+                postItem.src = user["profilepic"];
+                postItem.setAttribute("style","max-width:20px; max-height:20px")
+                postItem.setAttribute('id', user["username"]);
+                postList.appendChild(postItem);
+                postItem = document.createElement('div');
+                postItem.textContent = user["username"];
+                postItem.setAttribute('id', user["username"]);
+                postList.appendChild(postItem);
+
+            }
             console.log(`${data.username} left.`);
         });
 

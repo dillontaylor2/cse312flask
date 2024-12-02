@@ -1,3 +1,5 @@
+from urllib.parse import uses_relative
+
 from PIL import Image, ImageOps
 from flask import Flask, render_template, send_from_directory, redirect, request, make_response, url_for, jsonify, abort
 from pymongo import MongoClient
@@ -5,6 +7,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 import hashlib
 import os
 import uuid
+import json
 import time
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -70,9 +73,8 @@ brie_data = database["Brie"]
 
 def changecolorgen(user):
     changedcolor = None
-    if user.get("profilecolor") != None:
-        hexval = {"red": "#FF7276", "pink": "#fff0f0", "orange": "#ffd6a5", "yellow": "#fbf8cc", "green": "#b9fbc0",
-                  "blue": "#bcf4de", "purple": "#b8b8ff"}
+    if user is not None and user.get("profilecolor") is not None:
+        hexval = {"red":"#FF7276","pink":"#fff0f0","orange":"#ffd6a5","yellow":"#fbf8cc","green":"#b9fbc0","blue":"#bcf4de","purple":"#b8b8ff"}
         colorlist = user["profilecolor"]
         colorstring = ""
         for colors in colorlist:
@@ -86,7 +88,7 @@ def check_user(authtoken):
     hashed_auth = hashlib.sha256(authtoken.encode()).hexdigest()
     found_user = user_data.find_one({"authtoken": hashed_auth})
     if found_user is None:
-        return "None"
+        return
     else:
         return found_user
 
@@ -155,34 +157,52 @@ def ratelimit_exceeded(e):
     return jsonify(error="Rate limit exceeded. Leave my app alone. You are blocked for 30 seconds."), 429
 
 
+# Update active users dynamically
+def update_user_list():
+    users = [entry["username"] for entry in active_users if "username" in entry]
+
+    socketio.emit('update_user_list', users)
+
+
 @app.after_request
 def add_nosniff(response):
     # if "X-Content-Type-Options" in response.headers:
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
-
-active_users = {}
+active_users = []
 
 
 @socketio.on('connect')
-def handle_connect(data):
+def handle_connect():
     authtoken = request.cookies.get('authtoken', "")
     user = check_user(authtoken)
-    if user == "None" or user is None:
-        emit('error', {'message': 'Unauthorized'}, broadcast=False)
+    if not user or user is None:
+        emit('error', {'message': 'Unauthorized'})
         return False
-    username = user.get("username", "Guest")
-    emit('user_connected', {"username": username}, broadcast=True)
+    else:
+        username = user.get("username", "Guest")
+        flag = True
+        for users in active_users:
+            if users["username"] == username:
+                flag = False
+        if flag:
+            active_users.append({"username":username,"profilepic":user.get("profilepic")})
+        emit("user",active_users, broadcast=True)
+        update_user_list()
 
 
 @socketio.on('disconnect')
 def handle_disconnect():
     authtoken = request.cookies.get('authtoken')
     user = check_user(authtoken) if authtoken else None
-    if user != "None" and user is not None:
-        username = user.get("username", "Guest")
-        emit('user_disconnected', {"username": username}, broadcast=True)
+    if user and user is not None:
+        username = user.get("username")
+        for activeuser in active_users:
+            if activeuser["username"] == username:
+                active_users.remove(activeuser)
+                emit("user_disconnected", active_users, broadcast=True)
+                update_user_list()
 
 
 @socketio.on('chat_message')
@@ -236,7 +256,7 @@ def get_posts():
 def find_user_file_with_username(username):
     found_user = user_data.find_one({"username": username})
     if found_user is None:
-        return "None"
+        return
     else:
         return found_user
 
@@ -248,20 +268,23 @@ def serve_first():
     if "authtoken" in request.cookies:
         authtoken = request.cookies.get("authtoken")
         user = check_user(authtoken)
-        if user == "None":
+        if user is None:
             matches = user_data.find({})
             liked_users = []
-            response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches,user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+            response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches,cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
 
             return response
         else:
+
             cheese_list = user["cheese"]
             matches = recommendation_gen_algo(cheese_list,user["liked_user"])
             liked_users = []
             for every_like in user["liked_user"]:
                 user_file = find_user_file_with_username(every_like)
-                liked_users.append(user_file)
+                if user_file is not None:
+                    liked_users.append(user_file)
+
             response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches, user=user["username"],cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
 
@@ -269,7 +292,8 @@ def serve_first():
 
     matches = user_data.find({})
     liked_users = []
-    response = make_response(render_template("index.html",dates=liked_users, soon_to_be_dates = matches, user= "None",cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+
+    response = make_response(render_template("index.html",dates=liked_users, soon_to_be_dates = matches, user= None,cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
     response.headers["Content-Type"] = "text/html"
     return response
 
@@ -280,6 +304,100 @@ def serve_signup():
     response.headers["Content-Type"] = "text/html"
     return response
 
+
+@app.route("/dms")
+def serve_dms():
+    response = make_response(render_template("dms.html"))
+    response.headers["Content-Type"] = "text/html"
+    return response
+
+DMdata = {}
+
+def addDMmessage(user1, user2, message):
+    # Create a consistent key for the conversation
+    conversation_key = f"{user1}_{user2}" if f"{user1}_{user2}" in DMdata else f"{user2}_{user1}"
+
+    # Initialize the conversation if it doesn't exist
+    if conversation_key not in DMdata:
+        DMdata[conversation_key] = []
+
+    # Append the message to the conversation
+    DMdata[conversation_key].append({
+        "sender": user1,
+        "message": message
+    })
+
+def getDMstruct(user1, user2):
+    # Create a consistent key for the conversation
+    conversation_key = f"{user1}_{user2}" if f"{user1}_{user2}" in DMdata else f"{user2}_{user1}"
+
+    # Return the conversation if it exists
+    return DMdata.get(conversation_key, [])
+
+@socketio.on('send_dm_message')
+def handle_dm_message(data):
+    authtoken = request.cookies.get('authtoken')
+    user = check_user(authtoken)
+    if not user:
+        return {"status": "error", "message": "Unauthorized"}
+
+    sender = user.get("username", "Guest")
+    recipient = data.get('recipient', "")
+    message = data.get('message', "")
+
+    if not recipient or not message:
+        return {"status": "error", "message": "Recipient or message missing"}
+
+    # Add the message to the DM structure
+    addDMmessage(sender, recipient, message)
+
+    # Notify the recipient if connected
+    emit("dm_message", {"username": sender, "message": message, "recipient": recipient}, broadcast=True)
+
+    return {"status": "success"}
+
+@socketio.on("get_dm_message_history")
+def handle_get_dm_message_history(data):
+    authtoken = request.cookies.get('authtoken')
+    user = check_user(authtoken)
+    username = user.get("username", "Guest")
+    recipient = data.get('recipient', "")
+
+    if username == "Guest" or not recipient:
+        emit('error', {'message': 'Invalid request'})
+        return
+
+    # Retrieve the conversation history
+    history = getDMstruct(username, recipient)
+    emit("return_dm_history", {"history": history})
+
+@socketio.on("get_user_list")
+def handle_get_user_list(data=None):
+    authtoken = request.cookies.get("authtoken")
+    user = check_user(authtoken)
+    if user == "None" or user is None:
+        emit("error", {"message": "Unauthorized"})
+        return
+
+    # Emit the current active user list
+    emit("user_list", {"users": list(active_users)})
+
+@app.route("/get_dm_users", methods=["GET"])
+def get_dm_users():
+    fin_data = posts_data.find({})
+    users = []
+    for entry in fin_data:
+        if "username" in entry:
+            users.append(entry["username"])
+    return jsonify({"users": users})
+
+@app.route("/get_current_user", methods=["GET"])
+def get_current_user():
+    authtoken = request.cookies.get("authtoken")
+    user = check_user(authtoken)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify({"username": user["username"]}), 200
 
 @app.route("/login")
 def serve_login():
@@ -292,8 +410,8 @@ def serve_login():
 def logout():
     authtoken = request.cookies.get("authtoken")
     user = check_user(authtoken)
-    if user != "None":
-        user_data.update_one({"username": user["username"]}, {"$set": {"authtoken": ""}})
+    if user != None:
+        user_data.update_one({"username": user["username"]},{"$set" : {"authtoken": ""}})
     response = make_response(redirect("/"))
     response.set_cookie("authtoken", authtoken, httponly=True, max_age=-3600)
     return response
@@ -486,27 +604,26 @@ def serve_logo():
 @app.route("/like_user", methods=["POST"])
 def add_user_to_like():
     req_json = request.get_json()
-    user1 = req_json["user_that_likes"]
-    user2 = req_json["user_that_got_liked"]
-    if user1 == "None" or user2 == "None":
-        return redirect("/", code=302)
-    found_user = user_data.find_one({"username": user1})
-    liked_user = found_user["liked_user"]
-    matches = recommendation_gen_algo(found_user["cheese"],found_user["liked_user"])
-    if user2 in liked_user:
-        liked_user.remove(user2)
-        user_data.update_one({"username": user1}, {"$set": {"liked_user": liked_user}})
-        return redirect("/", code=302)
-    else:
-        liked_user.append(user2)
-        user_data.update_one({"username": user1}, {"$set": {"liked_user": liked_user}})
-        found_user2 = user_data.find_one({"username": user2})
-        liked_user2 = found_user2["liked_user"]
-        return "It works till here"
-        if user1 in liked_user2:
-            response = make_response(render_template("index.html", user2=user2, dates=matches, user=user1))
-            return response
-        return redirect("/", code=302)
+    if request.cookies.get("authtoken") is not None:
+        user1 = check_user(request.cookies.get("authtoken"))
+        user2 = req_json["user_that_got_liked"]
+        if user1 == "None" or user2 == "None":
+            return redirect("/",code=302)
+        found_user = user_data.find_one({"username":user1.get("username")})
+        liked_user = found_user["liked_user"]
+        if user2 in liked_user:
+            user_data.update_one({"username":user1.get("username")},{"$pull" : {"liked_user": user2}})
+            return redirect("/",code=302)
+        else:
+            user_data.update_one({"username":user1.get("username")},{"$push" : {"liked_user": user2}})
+
+            found_user2 = user_data.find_one({"username":user2})
+            liked_user2 = found_user2["liked_user"]
+
+            if user1.get("username") in liked_user2:
+                #response = make_response(render_template("index.html",user2=user2,dates=matches,user=user1))
+                return jsonify(user2), 200
+        return redirect("/",code=302)
 
 
 if __name__ == "__main__":
