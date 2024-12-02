@@ -47,7 +47,7 @@
     </div>
 
     <script>
-        const socket = io({ transports: ['websocket'] });
+        const socket = io("ws:"+String(window.location).replace(window.location.protocol,"").replace(window.location.pathname,""),{transports: ['websocket']}); // Connect to the WebSocket server
         let currentRecipient = null;
         let currentUser = null; // Store the logged-in user
 
