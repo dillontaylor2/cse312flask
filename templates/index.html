@@ -83,12 +83,8 @@
 
     <!-- Real-Time Posts Section -->
     <div>
-        <h2>Posts</h2>
+        <h2>Users Online</h2>
         <ul id="post-list"></ul>
-        <form id="post-form">
-            <input id="post-input" type="text" placeholder="Share something..." required />
-            <button type="submit">Post</button>
-        </form>
     </div>
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script>
@@ -141,11 +137,35 @@
         });
 
         socket.on('user_connected', (data) => {
-            var username = data.username
+            console.log(data)
+            const postList = document.getElementById('post-list');
+            postList.innerHTML = "";
+            if (postList) {
+                for (users of data) {
+                    var postItem = document.createElement('li');
+                    postItem.textContent = `${users}`;
+                    postItem.setAttribute('id',users);
+                    postList.appendChild(postItem);
+                }
+            } else {
+                console.error("Post list element not found");
+            }
             console.log(`${data.username} joined.`);
         });
 
         socket.on('user_disconnected', (data) => {
+            const postList = document.getElementById('post-list');
+            postList.innerHTML = "";
+            if (postList) {
+                for (users of data) {
+                    var postItem = document.createElement('li');
+                    postItem.textContent = `${users}`;
+                    postItem.setAttribute('id',users);
+                    postList.appendChild(postItem);
+                }
+            } else {
+                console.error("Post list element not found");
+            }
             console.log(`${data.username} left.`);
         });
 

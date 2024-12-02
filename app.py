@@ -107,7 +107,14 @@ def handle_connect(data):
         emit('error', {'message': 'Unauthorized'}, broadcast=False)
         return False
     username = user.get("username", "Guest")
-    emit('user_connected', {"username": username}, broadcast=True)
+    posts_data.insert_one({"username": username})
+    fin_data = posts_data.find({})
+    users = []
+    for entry in fin_data:
+        print(entry)
+        users.append(entry["username"])
+    emit('user_connected', users, broadcast=True)
+
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -115,7 +122,12 @@ def handle_disconnect():
     user = check_user(authtoken) if authtoken else None
     if user != "None" and user is not None:
         username = user.get("username", "Guest")
-        emit('user_disconnected', {"username": username}, broadcast=True)
+        posts_data.delete_one({"username": username})
+        fin_data = posts_data.find({})
+        users = []
+        for entry in fin_data:
+            users.append(entry["username"])
+        emit('user_disconnected', users, broadcast=True)
 
 @socketio.on('chat_message')
 def handle_chat_message(data):
