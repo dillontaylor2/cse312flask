@@ -130,7 +130,7 @@
 
         // WebSocket Integration
         //CHANGE TO WSS INSTEAD OF WS FOR SECURE
-        const socket = io("ws:"+String(window.location).replace(window.location.protocol,""),{transports: ['websocket']}); // Connect to the WebSocket server
+        const socket = io("wss:"+String(window.location).replace(window.location.protocol,""),{transports: ['websocket']}); // Connect to the WebSocket server
 
         // WebSocket Event Handlers
         socket.on('connect', () => {
