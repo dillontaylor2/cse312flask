@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMs - Fromage</title>
+    <script>
+        function setformaction() {
+            document.getElementById("pfp-upload").setAttribute("action", window.location.href + "/upload")
+        }
+        window.onload = setformaction
+    </script>
+    <script src="/static/changecolor.js"></script>
+    <link rel="stylesheet" href="/static/profilecss.css"/>
+
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Host+Grotesk:ital,wght@0,300..800;1,300..800&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Monsieur+La+Doulaise&family=Yesteryear&display=swap"
+          rel="stylesheet">
+</head>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="shortcut icon" type="image/png" href="/static/Untitled.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Host+Grotesk:ital,wght@0,300..800;1,300..800&display=swap"
+      rel="stylesheet">
+</head>
+<body>
+<div class="topbar">
+    <a class="active" href="/">fromage</a>
+    <div class="register">
+        {% if viewer == "None" %}
+            <a href="/login">Log In</a>
+            <a href="/register">Sign Up</a>
+        {% endif %}
+        {% if viewer != "None" %}
+            <a href="/logout">Logout</a>
+            <a href="/profile/{{ viewer }}" id="profile">{{ viewer }}</a>
+        {% endif %}
+    </div>
+</div>
+<div id="window">
+
+    <div class="container">
+        <div class="sidebar">
+            <ul class="user-list">
+                <li>User 1</li>
+                <li>User 2</li>
+                <li>User 3</li>
+            </ul>
+        </div>
+        <div class="chat-interface">
+            <div class="chat-window"><p>Welcome to the chat!</p></div>
+            <div id="message-input" class="message-input"><input type="text" placeholder="Type your message...">
+                <button onclick="sendmessageDM()">Send</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        const socket = io({transports: ['websocket']});
+        socket.on('dm_message', (data) => {
+            const chatBox = document.getElementById('chat-window');
+            if (chatBox) {
+                const messageItem = document.createElement('li');
+                messageItem.textContent = `${data.username}: ${data.message}`;
+                chatBox.appendChild(messageItem);
+                chatBox.scrollTop = chatBox.scrollHeight; //auto scroll down
+            } else {
+                console.error("Chat box element not found");
+            }
+        });
+        function sendmessageDM() {
+            const message = document.getElementById('message-input').value;
+            socket.emit('send_dm_message', message);
+            console.log("sending a message!");
+        }
+    </script>
+</body>
+</html>
