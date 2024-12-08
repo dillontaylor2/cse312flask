@@ -23,7 +23,6 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 UPLOAD_FOLDER = 'images'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-
 # -- Start rate limit code
 # Configure Flask-Limiter
 limiter = Limiter(
@@ -31,7 +30,7 @@ limiter = Limiter(
     app=app,
     # Default behavior: Limit to 50 requests in 10 seconds and block for 30 seconds
     default_limits=["50 per 10 seconds"],
-    storage_uri="memory://",    # we could hook mongo into this
+    storage_uri="memory://",  # we could hook mongo into this
 )
 
 # so instead we doing it hot
@@ -51,6 +50,8 @@ def is_blocked(ip):
 def block_ip(ip):
     block_duration = 30  # seconds
     blocked_ips[ip] = time.time() + block_duration
+
+
 # -- end rate limit starter
 
 
@@ -74,7 +75,8 @@ brie_data = database["Brie"]
 def changecolorgen(user):
     changedcolor = None
     if user is not None and user.get("profilecolor") is not None:
-        hexval = {"red":"#FF7276","pink":"#fff0f0","orange":"#ffd6a5","yellow":"#fbf8cc","green":"#b9fbc0","blue":"#bcf4de","purple":"#b8b8ff"}
+        hexval = {"red": "#FF7276", "pink": "#fff0f0", "orange": "#ffd6a5", "yellow": "#fbf8cc", "green": "#b9fbc0",
+                  "blue": "#bcf4de", "purple": "#b8b8ff"}
         colorlist = user["profilecolor"]
         colorstring = ""
         for colors in colorlist:
@@ -93,41 +95,41 @@ def check_user(authtoken):
         return found_user
 
 
-def check_custom_dict_and_matches(custom_dict,matches):
+def check_custom_dict_and_matches(custom_dict, matches):
     for mat in matches:
         if custom_dict["username"] == mat["username"]:
             return False
     return True
 
 
-def recommendation_gen_algo(cheese_list,liked_user_list):
+def recommendation_gen_algo(cheese_list, liked_user_list):
     matches = []
     for one_cheese in cheese_list:
         if one_cheese == "Mozzarella":
             mat = moz_data.find({})
             for person in mat:
                 custom_dict = person
-                bo = check_custom_dict_and_matches(custom_dict,matches)
+                bo = check_custom_dict_and_matches(custom_dict, matches)
                 if bo and custom_dict["username"] not in liked_user_list:
                     matches.append(custom_dict)
         elif one_cheese == "Brie":
             mat = brie_data.find({})
             for person in mat:
                 custom_dict = person
-                bo = check_custom_dict_and_matches(custom_dict,matches)
+                bo = check_custom_dict_and_matches(custom_dict, matches)
                 if bo and custom_dict["username"] not in liked_user_list:
                     matches.append(custom_dict)
         else:
             mat = ched_data.find({})
             for person in mat:
                 custom_dict = person
-                bo = check_custom_dict_and_matches(custom_dict,matches)
+                bo = check_custom_dict_and_matches(custom_dict, matches)
                 if bo and custom_dict["username"] not in liked_user_list:
                     matches.append(custom_dict)
     second_list = user_data.find({})
     for all_people in second_list:
         custom_dict = all_people
-        bo = check_custom_dict_and_matches(custom_dict,matches)
+        bo = check_custom_dict_and_matches(custom_dict, matches)
         if bo and custom_dict["username"] not in liked_user_list:
             matches.append(custom_dict)
     return matches
@@ -170,6 +172,7 @@ def add_nosniff(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
+
 active_users = []
 
 
@@ -187,8 +190,8 @@ def handle_connect():
             if users["username"] == username:
                 flag = False
         if flag:
-            active_users.append({"username":username,"profilepic":user.get("profilepic")})
-        emit("user",active_users, broadcast=True)
+            active_users.append({"username": username, "profilepic": user.get("profilepic")})
+        emit("user", active_users, broadcast=True)
         update_user_list()
 
 
@@ -271,21 +274,24 @@ def serve_first():
         if user is None:
             matches = user_data.find({})
             liked_users = []
-            response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches,cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+            response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates=matches,
+                                                     cheesebannerlink=cheesebannerlink, colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
 
             return response
         else:
 
             cheese_list = user["cheese"]
-            matches = recommendation_gen_algo(cheese_list,user["liked_user"])
+            matches = recommendation_gen_algo(cheese_list, user["liked_user"])
             liked_users = []
             for every_like in user["liked_user"]:
                 user_file = find_user_file_with_username(every_like)
                 if user_file is not None:
                     liked_users.append(user_file)
 
-            response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates = matches, user=user["username"],cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+            response = make_response(
+                render_template("index.html", dates=liked_users, soon_to_be_dates=matches, user=user["username"],
+                                cheesebannerlink=cheesebannerlink, colorchangegen=colorChange))
             response.headers["Content-Type"] = "text/html"
 
             return response
@@ -293,7 +299,8 @@ def serve_first():
     matches = user_data.find({})
     liked_users = []
 
-    response = make_response(render_template("index.html",dates=liked_users, soon_to_be_dates = matches, user= None,cheesebannerlink=cheesebannerlink,colorchangegen=colorChange))
+    response = make_response(render_template("index.html", dates=liked_users, soon_to_be_dates=matches, user=None,
+                                             cheesebannerlink=cheesebannerlink, colorchangegen=colorChange))
     response.headers["Content-Type"] = "text/html"
     return response
 
@@ -311,7 +318,9 @@ def serve_dms():
     response.headers["Content-Type"] = "text/html"
     return response
 
+
 DMdata = {}
+
 
 def addDMmessage(user1, user2, message):
     # Create a consistent key for the conversation
@@ -327,12 +336,14 @@ def addDMmessage(user1, user2, message):
         "message": message
     })
 
+
 def getDMstruct(user1, user2):
     # Create a consistent key for the conversation
     conversation_key = f"{user1}_{user2}" if f"{user1}_{user2}" in DMdata else f"{user2}_{user1}"
 
     # Return the conversation if it exists
     return DMdata.get(conversation_key, [])
+
 
 @socketio.on('send_dm_message')
 def handle_dm_message(data):
@@ -356,6 +367,7 @@ def handle_dm_message(data):
 
     return {"status": "success"}
 
+
 @socketio.on("get_dm_message_history")
 def handle_get_dm_message_history(data):
     authtoken = request.cookies.get('authtoken')
@@ -371,6 +383,7 @@ def handle_get_dm_message_history(data):
     history = getDMstruct(username, recipient)
     emit("return_dm_history", {"history": history})
 
+
 @socketio.on("get_user_list")
 def handle_get_user_list(data=None):
     authtoken = request.cookies.get("authtoken")
@@ -382,6 +395,7 @@ def handle_get_user_list(data=None):
     # Emit the current active user list
     emit("user_list", {"users": list(active_users)})
 
+
 @app.route("/get_dm_users", methods=["GET"])
 def get_dm_users():
     fin_data = posts_data.find({})
@@ -391,6 +405,7 @@ def get_dm_users():
             users.append(entry["username"])
     return jsonify({"users": users})
 
+
 @app.route("/get_current_user", methods=["GET"])
 def get_current_user():
     authtoken = request.cookies.get("authtoken")
@@ -398,6 +413,7 @@ def get_current_user():
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify({"username": user["username"]}), 200
+
 
 @app.route("/login")
 def serve_login():
@@ -411,7 +427,7 @@ def logout():
     authtoken = request.cookies.get("authtoken")
     user = check_user(authtoken)
     if user != None:
-        user_data.update_one({"username": user["username"]},{"$set" : {"authtoken": ""}})
+        user_data.update_one({"username": user["username"]}, {"$set": {"authtoken": ""}})
     response = make_response(redirect("/"))
     response.set_cookie("authtoken", authtoken, httponly=True, max_age=-3600)
     return response
@@ -437,18 +453,23 @@ def create_user():
             cheese = []
             if moz == "Mozzarella":
                 cheese.append("Mozzarella")
-                moz_data.insert_one({"username":username,"age":age,"catchphrase":catch_p,"profilepic":"/static/default.jpg"})
+                moz_data.insert_one(
+                    {"username": username, "age": age, "catchphrase": catch_p, "profilepic": "/static/default.jpg"})
             if ched == "Cheddar":
                 cheese.append("Cheddar")
-                ched_data.insert_one({"username":username,"age":age,"catchphrase":catch_p,"profilepic":"/static/default.jpg"})
+                ched_data.insert_one(
+                    {"username": username, "age": age, "catchphrase": catch_p, "profilepic": "/static/default.jpg"})
             if brie == "Brie":
                 cheese.append("Brie")
-                brie_data.insert_one({"username":username,"age":age,"catchphrase":catch_p,"profilepic":"/static/default.jpg"})
+                brie_data.insert_one(
+                    {"username": username, "age": age, "catchphrase": catch_p, "profilepic": "/static/default.jpg"})
             fin_pass = password + salt
             fin_pass = hashlib.sha256(fin_pass.encode()).hexdigest()
-            user_data.insert_one({"username": username, "password": fin_pass, "cheese": cheese,"authtoken": "","liked_user":[],"match":[],"age":age,"catchphrase":catch_p,"profilepic":"/static/default.jpg"})
-            
-            response = redirect("/login",code=302)
+            user_data.insert_one(
+                {"username": username, "password": fin_pass, "cheese": cheese, "authtoken": "", "liked_user": [],
+                 "match": [], "age": age, "catchphrase": catch_p, "profilepic": "/static/default.jpg"})
+
+            response = redirect("/login", code=302)
             return response
         else:
             response = make_response(render_template("register.html", password_mismatch=True))
@@ -544,17 +565,21 @@ def save_profilepic(username):
             print('uploaded successfully')
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            with Image.open("images/"+filename) as im:
-                ImageOps.fit(im, (1000, 1000)).save("images/"+filename)
-            user_data.update_one({"username": username}, {"$set": {"profilepic": url_for('download_file', name=filename)}})
+            with Image.open("images/" + filename) as im:
+                ImageOps.fit(im, (1000, 1000)).save("images/" + filename)
+            user_data.update_one({"username": username},
+                                 {"$set": {"profilepic": url_for('download_file', name=filename)}})
             cheese_list = viewer["cheese"]
             for cheese in cheese_list:
                 if cheese == "Mozzarella":
-                    moz_data.update_one({"username": username}, {"$set": {"profilepic": url_for('download_file', name=filename)}})
+                    moz_data.update_one({"username": username},
+                                        {"$set": {"profilepic": url_for('download_file', name=filename)}})
                 elif cheese == "Cheddar":
-                    ched_data.update_one({"username": username}, {"$set": {"profilepic": url_for('download_file', name=filename)}})
+                    ched_data.update_one({"username": username},
+                                         {"$set": {"profilepic": url_for('download_file', name=filename)}})
                 elif cheese == "Brie":
-                    brie_data.update_one({"username": username}, {"$set": {"profilepic": url_for('download_file', name=filename)}})
+                    brie_data.update_one({"username": username},
+                                         {"$set": {"profilepic": url_for('download_file', name=filename)}})
 
     return redirect(request.url.replace("/upload", ""))
 
@@ -608,22 +633,22 @@ def add_user_to_like():
         user1 = check_user(request.cookies.get("authtoken"))
         user2 = req_json["user_that_got_liked"]
         if user1 == "None" or user2 == "None":
-            return redirect("/",code=302)
-        found_user = user_data.find_one({"username":user1.get("username")})
+            return redirect("/", code=302)
+        found_user = user_data.find_one({"username": user1.get("username")})
         liked_user = found_user["liked_user"]
         if user2 in liked_user:
-            user_data.update_one({"username":user1.get("username")},{"$pull" : {"liked_user": user2}})
-            return redirect("/",code=302)
+            user_data.update_one({"username": user1.get("username")}, {"$pull": {"liked_user": user2}})
+            return redirect("/", code=302)
         else:
-            user_data.update_one({"username":user1.get("username")},{"$push" : {"liked_user": user2}})
+            user_data.update_one({"username": user1.get("username")}, {"$push": {"liked_user": user2}})
 
-            found_user2 = user_data.find_one({"username":user2})
+            found_user2 = user_data.find_one({"username": user2})
             liked_user2 = found_user2["liked_user"]
 
             if user1.get("username") in liked_user2:
                 #response = make_response(render_template("index.html",user2=user2,dates=matches,user=user1))
                 return jsonify(user2), 200
-        return redirect("/",code=302)
+        return redirect("/", code=302)
 
 
 if __name__ == "__main__":
