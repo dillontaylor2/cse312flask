@@ -160,6 +160,28 @@
             }
         });
 
+        function getAllAppendedChildren(parent) {
+            let children = [];
+            for (let i = 0; i < parent.childNodes.length; i++) {
+                children.push(parent.childNodes[i]);
+            }
+            return children;
+        }
+
+        socket.on("updateTimer", (data) => {
+            for (let user of data){
+                var postlist = document.getElementById("post-list");
+                var Children = getAllAppendedChildren(postlist);
+                for (var i = 0; i < Children.length; i++) {
+                    var postItem = getAllAppendedChildren(Children[i]);
+                    var userNameGet = postItem['id'];
+                    if (user.username === userNameGet) {
+                        user.innerHTML = "Active for :" + user.timeOn + " seconds.";
+                    }
+                }
+            }
+        });
+
         socket.on('user_disconnected', (data) => {
             const postList = document.getElementById('post-list');
             postList.innerHTML =""

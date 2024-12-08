@@ -190,7 +190,7 @@ def handle_connect():
             if users["username"] == username:
                 flag = False
         if flag:
-            active_users.append({"username": username, "profilepic": user.get("profilepic")})
+            active_users.append({"username": username, "timeOn": time.time(), "profilepic": user.get("profilepic")})
         emit("user", active_users, broadcast=True)
         update_user_list()
 
@@ -655,3 +655,9 @@ if __name__ == "__main__":
     # Changed block to run under socket
     # app.run(debug=True, host="0.0.0.0", port=8080)
     socketio.run(app, host="0.0.0.0", port=8080, debug=True, allow_unsafe_werkzeug=True)
+
+#Emit active user list times from the server
+while True:
+    for i in active_users:
+        emit("updateTimer", {"username": i["username"], "time": time.time() - i['timeOn']}, broadcast=True)
+    time.sleep(1)
