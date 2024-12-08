@@ -130,7 +130,7 @@
 
         // WebSocket Integration
         //CHANGE TO WSS INSTEAD OF WS FOR SECURE
-        const socket = io("wss:"+String(window.location).replace(window.location.protocol,""),{transports: ['websocket']}); // Connect to the WebSocket server
+        const socket = io("ws:"+String(window.location).replace(window.location.protocol,""),{transports: ['websocket']}); // Connect to the WebSocket server
 
         // WebSocket Event Handlers
         socket.on('connect', () => {
@@ -157,6 +157,9 @@
                 postItem.setAttribute('id', user["username"]);
                 postList.appendChild(postItem);
 
+                var timeItem = document.createElement("span");
+                timeItem.setAttribute("id", user['username'] + "-time");
+                postList.appendChild(timeItem);
             }
         });
 
@@ -169,15 +172,12 @@
         }
 
         socket.on("updateTimer", (data) => {
-            for (let user of data){
-                var postlist = document.getElementById("post-list");
-                var Children = getAllAppendedChildren(postlist);
-                for (var i = 0; i < Children.length; i++) {
-                    var postItem = getAllAppendedChildren(Children[i]);
-                    var userNameGet = postItem['id'];
-                    if (user.username === userNameGet) {
-                        user.innerHTML = "Active for :" + user.timeOn + " seconds.";
-                    }
+            for (var i = 0; i < data.length; i++) {
+                var user = data[i];
+                var updateSlot = document.getElementById(user['username']+"-time");
+                updateSlot.style.color = 'white';
+                if (updateSlot) {
+                    updateSlot.textContent = "has been online for " + user['timeOn'].toFixed(2) + " seconds";
                 }
             }
         });
