@@ -1,6 +1,6 @@
 services:
   mongo:
-    image: mongo:4.2.5
+    image: mongo:latest
     ports:
       - '127.0.0.1:4080:27017'
   app:
