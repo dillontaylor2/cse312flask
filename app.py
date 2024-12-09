@@ -13,6 +13,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
+import threading
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -162,7 +163,6 @@ def ratelimit_exceeded(e):
 # Update active users dynamically
 def update_user_list():
     users = [entry["username"] for entry in active_users if "username" in entry]
-
     socketio.emit('update_user_list', users)
 
 
@@ -190,9 +190,10 @@ def handle_connect():
             if users["username"] == username:
                 flag = False
         if flag:
-            active_users.append({"username": username, "profilepic": user.get("profilepic")})
+            active_users.append({"username": username, "timeOn": time.time(), "profilepic": user.get("profilepic")})
         emit("user", active_users, broadcast=True)
         update_user_list()
+        emit("updateTimer", {"username": username, "timeOn": 0, "profilepic": user.get("profilepic")})
 
 
 @socketio.on('disconnect')
@@ -650,8 +651,21 @@ def add_user_to_like():
                 return jsonify(user2), 200
         return redirect("/", code=302)
 
+def backgroundTimer():
+    # Emit active user list times from the server
+    time.sleep(5)
+    while True:
+        compiledData = []
+        for i in active_users:
+            compiledData.append({
+                "username": i["username"],
+                "timeOn": time.time() - i["timeOn"],
+            })
+        socketio.emit("updateTimer", compiledData, namespace="/", to=None)
+        time.sleep(1)
 
 if __name__ == "__main__":
     # Changed block to run under socket
     # app.run(debug=True, host="0.0.0.0", port=8080)
+    socketio.start_background_task(backgroundTimer)
     socketio.run(app, host="0.0.0.0", port=8080, debug=True, allow_unsafe_werkzeug=True)

@@ -157,6 +157,28 @@
                 postItem.setAttribute('id', user["username"]);
                 postList.appendChild(postItem);
 
+                var timeItem = document.createElement("span");
+                timeItem.setAttribute("id", user['username'] + "-time");
+                postList.appendChild(timeItem);
+            }
+        });
+
+        function getAllAppendedChildren(parent) {
+            let children = [];
+            for (let i = 0; i < parent.childNodes.length; i++) {
+                children.push(parent.childNodes[i]);
+            }
+            return children;
+        }
+
+        socket.on("updateTimer", (data) => {
+            for (var i = 0; i < data.length; i++) {
+                var user = data[i];
+                var updateSlot = document.getElementById(user['username']+"-time");
+                updateSlot.style.color = 'white';
+                if (updateSlot) {
+                    updateSlot.textContent = "has been online for " + user['timeOn'].toFixed(2) + " seconds";
+                }
             }
         });
 
